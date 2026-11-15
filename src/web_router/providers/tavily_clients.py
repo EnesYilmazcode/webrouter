@@ -31,14 +31,14 @@ from tavily.errors import (
 from web_router.constants_tavily import TAVILY_LIMIT_MARKER
 from web_router.exceptions import ProviderError, describe
 from web_router.providers._utils import WarmClients, compact
-from web_router.types_errors import ERROR_KIND_AUTH, ProviderErrorKind
+from web_router.types_errors import ERROR_KIND_AUTH, ERROR_KIND_BAD_REQUEST, ERROR_KIND_RATE_LIMIT, ProviderErrorKind
 
 _KIND_BY_SDK_ERROR: Final[tuple[tuple[type[Exception], ProviderErrorKind], ...]] = (
     (InvalidAPIKeyError, ERROR_KIND_AUTH),  # 401
     (MissingAPIKeyError, ERROR_KIND_AUTH),
-    (UsageLimitExceededError, "rate_limit"),  # 429, and a keyless call's quota (its subclass)
-    (BadRequestError, "bad_request"),  # 400
-    (KeylessUnsupportedEndpointError, "bad_request"),
+    (UsageLimitExceededError, ERROR_KIND_RATE_LIMIT),  # 429, and a keyless call's quota (its subclass)
+    (BadRequestError, ERROR_KIND_BAD_REQUEST),  # 400
+    (KeylessUnsupportedEndpointError, ERROR_KIND_BAD_REQUEST),
 )
 """The kind of each SDK exception that stands for one HTTP status. ``ForbiddenError`` is read by :func:`_kind`."""
 
@@ -46,7 +46,7 @@ _KIND_BY_SDK_ERROR: Final[tuple[tuple[type[Exception], ProviderErrorKind], ...]]
 def _kind(exc: Exception) -> ProviderErrorKind | None:
     """``exc``'s kind, when it is one of the SDK's own; ``ForbiddenError`` covers a 403 and the plan limits 432/433."""
     if isinstance(exc, ForbiddenError):
-        return "rate_limit" if TAVILY_LIMIT_MARKER in str(exc).lower() else ERROR_KIND_AUTH
+        return ERROR_KIND_RATE_LIMIT if TAVILY_LIMIT_MARKER in str(exc).lower() else ERROR_KIND_AUTH
     return next((kind for sdk_type, kind in _KIND_BY_SDK_ERROR if isinstance(exc, sdk_type)), None)
 
 
