@@ -51,6 +51,19 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
         "enum": list(get_args(ResearchEffort)),
         "description": "Higher costs more and takes longer: leave it unset unless needed.",
     },
+    "data_apis": {
+        "type": "boolean",
+        "description": "Also list matching vendor data APIs under `data_apis`, free and never run; "
+        "`call_vendor` runs one. On by default.",
+    },
+    "data_apis_only": {
+        "type": "boolean",
+        "description": "The data APIs alone, no web call; takes only `max_results`.",
+    },
+    "configured_only": {
+        "type": "boolean",
+        "description": "Only data APIs whose credentials are set here.",
+    },
 }
 
 MCP_DESC_SEARCH = (

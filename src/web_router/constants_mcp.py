@@ -134,7 +134,8 @@ MCP_BUDGET_START_PROPERTIES: dict[str, dict[str, Any]] = {
 
 MCP_DESC_WEB_RUN = (
     "Hand a request in plain words to web-router's router, which picks the method and backends and runs "
-    "it (by default: a URL is read, anything else searched). Call a tool directly for its options. "
+    "it (by default: a URL is read, a report or comparison researched -- billed, minutes long, so set "
+    "`max_cost_usd` -- anything else searched). Call a tool directly for its options. "
     "`dry_run=true` returns the plan and bills nothing."
 )
 

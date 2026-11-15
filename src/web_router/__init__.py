@@ -141,6 +141,7 @@ from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResp
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_browse import BrowseProgress
 from web_router.types_cost import CostSource
+from web_router.types_data_api import DataApiMatch
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
@@ -196,6 +197,7 @@ __all__ = [
     "CompositeDecision",
     "ConfigurationError",
     "CostSource",
+    "DataApiMatch",
     "DeadlineExceededError",
     "Decider",
     "DeciderQuestion",

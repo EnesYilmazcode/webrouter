@@ -30,9 +30,14 @@ for others -- which is why it is a method and not an option on `extract`.
 by `query`: natively where the vendor's API has a search, as Apify's Store
 does, otherwise by reading the whole catalogue and matching here) and
 `live_data_source` describes one, schemas and all; the three share one
-registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier and no
-`auto`: a run fetches and parses on the backend's account, and a source's
-name belongs to one vendor, so `provider` is required. **A backend joins only
+registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier, and a
+run has no `auto`: it fetches and parses on the backend's account, and a
+source's name belongs to one vendor. The caller still never has to name
+one: `live_data_sources` with no `provider` asks every backend with a key
+at once and merges the pages (`live_data_any.py`), each source naming its
+own backend, and `live_data`/`live_data_source` take that `LiveDataSource`
+whole; a bare name needs `provider` unless one backend is configured.
+**A backend joins only
 if it fetches on request**: data a vendor collected earlier and serves from
 storage is that vendor's own API, reached through `call_vendor`, never here.
 These were `run_template`, `templates` and `template`; the old names, and the
@@ -73,7 +78,9 @@ has no keyless tier, because every task bills.
 `vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
 not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
-returns the vendor's answer untouched. The vendors are data, not classes: one
+returns the vendor's answer untouched. `search` lists the read endpoints that
+match its query in `data_apis` -- locally, never calling one -- and only
+`call_vendor` runs one. The vendors are data, not classes: one
 JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
@@ -118,7 +125,9 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
-├── client_core.py      search() and extract(), with timeout=, mixed into both routers
+├── client_search.py    search(), with timeout=, mixed into both routers: the web results, plus the
+│                       data APIs that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
+├── client_core.py      extract(), with timeout=, mixed into both routers
 ├── client_warmup.py    warmup(): the search and extract backends and clients a first call builds
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
 │                       deprecated template names, mixed into both routers
@@ -358,6 +367,7 @@ src/web_router/
     │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
+    ├── _job_wait.py    waiting on a vendor's job (Oxylabs' jobs, Bright Data's snapshots); every error names it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
     ├── _runtime.py     what a router lends its calls: its cooldowns and max_concurrency's slots
     ├── _cooldown.py    a router's cooldowns: the backends a 429 or 402 told auto to leave alone
@@ -375,10 +385,11 @@ src/web_router/
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
+    ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
-    ├── oxylabs_jobs.py          waiting on a job-only scraper; every error after the submit names the job
+    ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
     ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the key and timeout both classes share
@@ -1260,6 +1271,12 @@ validated by the strict models in `web_router/vendors/schema.py` (an unknown
 key is refused). If a vendor seems to need code -- a signed request, say --
 it is a format change to discuss first, not a branch in `caller.py`.
 
+An endpoint goes in the catalog only when no WebRouter method covers it. A
+vendor that is also a backend (Tavily, Firecrawl, Exa...) keeps only what
+`search`, `extract`, `answer`, `research`, `live_data` and `browse` cannot do,
+and an endpoint leaves the catalog in the same pull request that adds the
+method covering it.
+
 1. Write it **from the vendor's own documentation**, never from another
    project's catalog: notes and summaries are ours. List the pages in
    `sources`, set `curated` to the date, and give each endpoint the
@@ -1546,7 +1563,7 @@ set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
-Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
+Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in

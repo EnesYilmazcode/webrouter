@@ -162,6 +162,7 @@ def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[
     no body, so carrying both would spend half the budget saying the same thing
     twice. Each result's text is the part a cut trims, marked where it was cut;
     ``truncated`` says only that the answer was cut or a result left out.
+    Matching data APIs ride along only when there are some, each cut to a few short fields.
     """
     results = [
         compact(
@@ -185,6 +186,7 @@ def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[
             "answer": answer,
             "result_count": len(response.results),
             "results": results,
+            "data_apis": [match.brief() for match in response.data_apis],
         }
     )
     shortened = answer != response.answer

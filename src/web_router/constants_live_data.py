@@ -11,6 +11,9 @@ from typing import Any, Final, get_args
 
 from web_router.types import ExtractFormat, Provider
 
+LIVE_DATA_JOB_DEADLINE_MARGIN: Final = 0.5
+"""Seconds a wait on a vendor's job stops before the call's own deadline, so the job's error, naming it, is raised."""
+
 # -- messages ---------------------------------------------------------------
 
 MSG_LIVE_DATA_FAILED: Final = "live data run failed: {error}"
@@ -90,10 +93,11 @@ MCP_LIVE_DATA_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_LIVE_DATA_SOURCES = (
-    "List a vendor's live data sources: ready-made scrapers that turn one site's pages (a product, a job "
+    "List live data sources: ready-made scrapers that turn one site's pages (a product, a job "
     "listing) into records with fixed fields. About a second. Pass `query` with the site or page kind; "
-    "page with `limit` and `offset`. Each lists its `required_inputs` and `sample_inputs`; "
-    "`live_data_source` has the full schemas."
+    "page with `limit` and `offset`. Leave `provider` out to search every configured vendor: each row "
+    "names its `provider`, and `failures` names a vendor that could not answer. Each lists its "
+    "`required_inputs` and `sample_inputs`; `live_data_source` has the full schemas."
 )
 
 MCP_DESC_LIVE_DATA_SOURCE = (
@@ -103,8 +107,9 @@ MCP_DESC_LIVE_DATA_SOURCE = (
 
 MCP_DESC_LIVE_DATA = (
     "Run a live data source and get structured records, scraped for this call. Seconds, up to minutes; "
-    "bills one run at the vendor's rate. `inputs` come from `live_data_source`. For a page no source "
-    "covers use `extract`. A failed run is an error, never an empty answer."
+    "bills one run at the vendor's rate. Pass the `provider` `live_data_sources` named (optional with one "
+    "vendor configured); `inputs` come from `live_data_source`. For a page no source covers use "
+    "`extract`. A failed run is an error, never an empty answer."
 )
 
 # -- search -----------------------------------------------------------------

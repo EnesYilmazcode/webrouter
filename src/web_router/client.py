@@ -51,6 +51,7 @@ from web_router.client_requests import (
     build_browser_request,
     build_research_request,
 )
+from web_router.client_search import AsyncSearch, SyncSearch
 from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import (
@@ -59,6 +60,7 @@ from web_router.constants import (
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     RESEARCH_TIMEOUT,
 )
+from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
@@ -110,7 +112,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
@@ -126,9 +128,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
                 credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
-                :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
-                ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
+                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
+                ``"rules"`` unless set (:mod:`web_router.routing.rules`), ``None`` for none. A name builds a registered
+                router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
             vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
                 :mod:`web_router.client_vendors`.
@@ -139,9 +141,8 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._runtime = Runtime.capped(max_concurrency)
         self._init_vendors(vendor_credentials)
         name = provider_name(provider)
-        # Either registry is enough to name a default: a router defaulted to a
-        # search-only backend still extracts through `provider=`, and the
-        # method that cannot serve the default says so when it is called.
+        # Either registry is enough to name a default: a router defaulted to a search-only backend still extracts
+        # through `provider=`, and the method that cannot serve the default says so when it is called.
         known = every_provider_name()
         if name not in known:
             raise ProviderNotFoundError(name, known)
@@ -271,6 +272,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
 
 class WebRouter(
     _BaseRouter[BrowserHandle],
+    SyncSearch,
     SyncCore,
     SyncWarmup,
     SyncAnswer,
@@ -297,7 +299,7 @@ class WebRouter(
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
@@ -561,6 +563,7 @@ class WebRouter(
 
 class AsyncWebRouter(
     _BaseRouter[AsyncBrowserHandle],
+    AsyncSearch,
     AsyncCore,
     AsyncWarmup,
     AsyncAnswer,

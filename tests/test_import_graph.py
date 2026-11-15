@@ -6,9 +6,9 @@ from __future__ import annotations
 def test_types_imports_nothing_of_ours() -> None:
     """The import graph is types <- constants <- exceptions <- everything else; the rows live here to keep it so.
 
-    The exceptions are the decision record, the page types, the option levels, citations and a call's cost,
-    each kept apart in a leaf that imports nothing of ours either. A module-level ``__getattr__`` runs on
-    attribute access, never at import time, so its import -- ``types``'s, of the benchmark models' old
+    The exceptions are the decision record, the page types, the option levels, citations, a call's cost and the
+    data API match, each kept apart in a leaf that imports nothing of ours either. A module-level ``__getattr__``
+    runs on attribute access, never at import time, so its import -- ``types``'s, of the benchmark models' old
     path -- is no edge in that graph.
     """
     import ast
@@ -17,6 +17,7 @@ def test_types_imports_nothing_of_ours() -> None:
     import web_router.types as types_module
     import web_router.types_citation as citation_module
     import web_router.types_cost as cost_module
+    import web_router.types_data_api as data_api_module
     import web_router.types_decision as decision_module
     import web_router.types_errors as errors_module
     import web_router.types_options as options_module
@@ -42,9 +43,18 @@ def test_types_imports_nothing_of_ours() -> None:
         "web_router.types_errors",
         "web_router.types_citation",
         "web_router.types_cost",
+        "web_router.types_data_api",
     }
     assert set(ours(types_module)) == leaves
-    leaf_modules = (decision_module, page_module, options_module, errors_module, citation_module, cost_module)
+    leaf_modules = (
+        decision_module,
+        page_module,
+        options_module,
+        errors_module,
+        citation_module,
+        cost_module,
+        data_api_module,
+    )
     assert all(ours(module) == [] for module in leaf_modules)
 
 
