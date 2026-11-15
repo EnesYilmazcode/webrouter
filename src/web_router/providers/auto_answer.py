@@ -44,6 +44,7 @@ from web_router.providers._chain import (
     _quoted,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._hop import ahop, hop
 from web_router.providers._members import _Members
 from web_router.providers.answer import AnswerProvider
 from web_router.routing.attempts import admitted, failed, in_call_order, noted
@@ -130,7 +131,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not admitted("answer", provider_name, request):
                 continue
             try:
-                response = self._member(position).answer(request)
+                response = hop("answer", provider_name, self._member(position).answer, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
             except UnsupportedParameterError as exc:
@@ -155,7 +156,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not admitted("answer", provider_name, request):
                 continue
             try:
-                response = await self._member(position).aanswer(request)
+                response = await ahop("answer", provider_name, self._member(position).aanswer, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
             except UnsupportedParameterError as exc:

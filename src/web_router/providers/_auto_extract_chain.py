@@ -21,6 +21,7 @@ from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._hop import ahop, hop
 from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, contributed, failed
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
@@ -84,7 +85,7 @@ def _first_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) -> tupl
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = walk.member(position).extract(delegated)
+            response = hop("extract", provider_name, walk.member(position).extract, delegated)
         except DeadlineExceededError as exc:
             return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
@@ -107,7 +108,7 @@ async def _afirst_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) 
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = await walk.member(position).aextract(delegated)
+            response = await ahop("extract", provider_name, walk.member(position).aextract, delegated)
         except DeadlineExceededError as exc:
             return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:

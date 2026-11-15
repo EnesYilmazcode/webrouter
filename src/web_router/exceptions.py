@@ -57,7 +57,7 @@ from web_router.constants import (
 from web_router.constants_errors import MSG_REUSED_LOOP
 from web_router.constants_invoke import MSG_ROUTER_FAILED
 from web_router.types import Provider
-from web_router.types_errors import classify, is_retryable, reused_loop
+from web_router.types_errors import ERROR_KIND_TIMEOUT, classify, is_retryable, reused_loop
 
 _BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
 
@@ -257,6 +257,7 @@ class DeadlineExceededError(WebRouterError):
     def __init__(self, provider: str, seconds: float, *, tried: str | None = None) -> None:
         self.provider = provider
         self.seconds = seconds
+        self.kind = ERROR_KIND_TIMEOUT  # as a ProviderError's, so an extract's late URL is a `timeout` failure
         message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
         # A failure's own text may end in a period already; the message adds its own.
         super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried.rstrip(".")) if tried else ""))
@@ -285,6 +286,9 @@ class ProviderError(WebRouterError):
     :attr:`retry_after` say what kind of failure it was, read from that exception
     and the message, so a caller can branch without parsing text.
     """
+
+    call_errors: tuple[BaseException, ...] = ()
+    """Each call's own error, when this one sums up several (an extract whose every URL failed)."""
 
     def __init__(
         self, provider: str, message: str, *, original: BaseException | None = None, kind: str | None = None

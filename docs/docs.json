@@ -82,6 +82,7 @@
       {
         "group": "Guides",
         "pages": [
+          "production",
           "benchmarks",
           "vendors",
           "custom-providers"

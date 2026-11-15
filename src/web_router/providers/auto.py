@@ -115,7 +115,8 @@ from web_router.providers._chain import (
     _valued,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
-from web_router.providers._members import _Members
+from web_router.providers._hop import ahop, hop
+from web_router.providers._members import BuiltMembers, _Members
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -140,7 +141,7 @@ from web_router.types import (
 from web_router.types_browse import BrowseProgress
 
 
-class AutoProvider(SearchProvider):
+class AutoProvider(BuiltMembers, SearchProvider):
     """Searches through the first backend that answers, credentialed ones first.
 
     Declares every option some member maps, and sends each request only to the
@@ -216,7 +217,7 @@ class AutoProvider(SearchProvider):
             if not admitted("search", provider_name, request):
                 continue
             try:
-                response = self._member(position).search(request)
+                response = hop("search", provider_name, self._member(position).search, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
@@ -237,7 +238,7 @@ class AutoProvider(SearchProvider):
             if not admitted("search", provider_name, request):
                 continue
             try:
-                response = await self._member(position).asearch(request)
+                response = await ahop("search", provider_name, self._member(position).asearch, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
@@ -303,7 +304,7 @@ class AutoProvider(SearchProvider):
             await member.aclose()
 
 
-class AutoExtractProvider(ExtractProvider):
+class AutoExtractProvider(BuiltMembers, ExtractProvider):
     """Extracts through the first backend that answers, credentialed ones first.
 
     Declares every format some member returns, and sends each request only to
@@ -316,8 +317,7 @@ class AutoExtractProvider(ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_EXTRACT_FORMATS
     default_format: ClassVar[ExtractFormat] = AUTO_EXTRACT_DEFAULT_FORMAT
-    # The members each batch as their own API allows, so there is nothing to split up here: one delegated call carries
-    # the whole request.
+    # The members each batch as their own API allows, so nothing is split up here: one delegated call carries it all.
     batches_urls: ClassVar[bool] = True
 
     def __init__(
