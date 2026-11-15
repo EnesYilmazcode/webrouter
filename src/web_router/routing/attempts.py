@@ -134,11 +134,15 @@ def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseExc
     """
     failures[provider] = exc
     noted(tool, provider, exc)
-    if getattr(exc, "kind", None) == ERROR_KIND_AUTH:
-        # A configured key that is refused is a setup problem auto would otherwise hide by moving on.
-        logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
+    warn_if_refused(provider, exc)
     if getattr(exc, "kind", None) in CHAIN_STOPPING_KINDS:
         raise exc
+
+
+def warn_if_refused(provider: str, exc: BaseException) -> None:
+    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide."""
+    if getattr(exc, "kind", None) == ERROR_KIND_AUTH:
+        logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
 
 
 def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
