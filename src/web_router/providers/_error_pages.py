@@ -29,7 +29,7 @@ from web_router.constants_extract import (
     MSG_EXTRACT_NEAR_EMPTY,
 )
 from web_router.providers._url_match import bare_url, owners
-from web_router.types import ExtractedDocument, ExtractFailure
+from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
 
 
@@ -77,6 +77,31 @@ def split_error_pages(
         else:
             kept.append(_warned(document))
     return kept, failed
+
+
+def named_failures(response: ExtractResponse, asked: Sequence[str]) -> ExtractResponse:
+    """``response`` with each failure the backend reported named by the requested URL it answers.
+
+    A backend may name a failure by where a redirect landed. Told as
+    :func:`~._url_match.owners` tells it, with the documents and the failures
+    claiming requested URLs together, so ``auto`` retries the URL asked for.
+    One whose owner cannot be told keeps its own URL. A ``target`` kind read
+    from a page a redirect reached is that page's, so it becomes ``upstream``.
+    """
+    if not response.failures:
+        return response
+    answered = [document.url for document in response.documents] + [failure.url for failure in response.failures]
+    named = owners(answered, asked)[len(response.documents) :]
+    failures = [_renamed(failure, owner) for failure, owner in zip(response.failures, named, strict=True)]
+    return response.model_copy(update={"failures": failures})
+
+
+def _renamed(failure: ExtractFailure, owner: str | None) -> ExtractFailure:
+    if owner is None or owner == failure.url:
+        return failure
+    redirected = bare_url(owner) != bare_url(failure.url)
+    kind = ERROR_KIND_UPSTREAM if redirected and failure.kind == ERROR_KIND_TARGET else failure.kind
+    return failure.model_copy(update={"url": owner, "kind": kind})
 
 
 def not_the_page(document: ExtractedDocument) -> str | None:

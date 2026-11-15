@@ -87,7 +87,7 @@ from web_router.exceptions import (
 )
 from web_router.live_data_compat import TemplateMethods
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
-from web_router.providers._error_pages import split_error_pages
+from web_router.providers._error_pages import named_failures, split_error_pages
 from web_router.providers._exhausted import nothing_returned
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
@@ -397,6 +397,7 @@ class _Collected:
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
+        response = named_failures(response, urls)
         documents, error_pages = split_error_pages(response.documents, urls, [f.url for f in response.failures])
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
@@ -412,8 +413,7 @@ class _Collected:
         Oxylabs returns no result tagged with the format asked for, a batching
         backend leaves a URL out of its list -- and the URL would otherwise
         vanish from a call that partly succeeded. Only reached when fewer items
-        came back than URLs went out, so a backend that canonicalizes the URL it
-        echoes is not mistaken for one that dropped it.
+        came back than URLs went out, so a rewritten echo is not read as a drop.
         """
         if len(response.documents) + len(response.failures) >= len(urls):
             return

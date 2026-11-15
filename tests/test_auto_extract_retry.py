@@ -171,3 +171,25 @@ def test_a_redirected_error_page_is_retried_and_reported_under_the_url_asked_for
 
     assert second.calls == [[GITHUB]]
     assert [failure.url for failure in response.failures] == [GITHUB]
+
+
+def test_a_failure_a_backend_reports_after_a_redirect_retries_the_url_asked_for(registered: list[str]) -> None:
+    """A backend may name a failure by where a redirect landed; the retry, and the response, use the URL asked for."""
+    landed = "https://github.com/login?return_to=x"
+
+    class Redirecting(_member("first")):  # type: ignore[misc]
+        def _respond(self, urls: list[str]) -> ExtractResponse:
+            documents = [ExtractedDocument(url=url, content=f"first: {TEXT}") for url in urls if url != GITHUB]
+            failures = [ExtractFailure(url=landed, error="[first] blocked")] if GITHUB in urls else []
+            return ExtractResponse(provider="first", documents=documents, failures=failures)
+
+    second = _member("second", refuses=frozenset({GITHUB}))
+    auto = _chain(registered, Redirecting, second)
+    try:
+        response = auto.extract(ExtractRequest(urls=[DOCS, GITHUB]))
+    finally:
+        auto.close()
+
+    assert second.calls == [[GITHUB]], "the URL asked for is retried, not the login page it landed on"
+    assert [document.url for document in response.documents] == [DOCS]
+    assert [failure.url for failure in response.failures] == [GITHUB]

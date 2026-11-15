@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from web_router.providers._auto_extract_chain import _merged
-from web_router.providers._error_pages import split_error_pages
+from web_router.providers._error_pages import named_failures, split_error_pages
 from web_router.providers._url_match import owners
 from web_router.routing.metered import combined_cost
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractRequest, ExtractResponse
@@ -26,6 +26,23 @@ def test_a_batch_cannot_name_a_redirect_two_urls_could_have_made() -> None:
     assert owners([LOGIN], [A, B]) == [None]
     assert owners([LOGIN], [A, B], also_claimed=[A]) == [B]  # the backend reported A failed itself
     assert owners([LOGIN, "https://elsewhere.test/"], [A, B, C], also_claimed=[A]) == [None, None]
+
+
+def test_a_failure_the_backend_reported_after_a_redirect_is_named_by_the_url_asked_for() -> None:
+    reported = ExtractFailure(url=LOGIN, error="blocked", kind="target", status_code=404)
+    response = ExtractResponse(provider="p", documents=[ExtractedDocument(url=A, content=TEXT)], failures=[reported])
+
+    [failure] = named_failures(response, [A, B]).failures
+
+    assert (failure.url, failure.error, failure.status_code) == (B, "blocked", 404)
+    assert failure.kind == "upstream", "a 404 where a redirect landed says nothing certain about the URL asked for"
+
+
+def test_a_reported_failure_keeps_its_own_url_when_two_urls_could_own_it() -> None:
+    response = ExtractResponse(provider="p", failures=[ExtractFailure(url=LOGIN, error="blocked")])
+
+    assert named_failures(response, [A, B]).failures[0].url == LOGIN
+    assert named_failures(response, [A]).failures[0].url == A, "a one-URL call's failure is that URL's"
 
 
 def test_a_retry_leaves_out_a_page_no_url_it_was_sent_for_can_be_told() -> None:
