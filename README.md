@@ -124,8 +124,10 @@ order committed [benchmark results](benchmarks/providers/README.md) rank them,
 then the free tiers. A member that fails, is rate-limited or answers empty
 passes the call to the next. A member that cannot honour an option you set is
 skipped for that call, and if none can, the call raises rather than running
-without it. Live data and vendor calls always name their provider, since a
-source or an account belongs to one vendor.
+without it. Live data has no fallback, since a source belongs to one vendor:
+`live_data_sources()` with no provider searches every vendor you hold a key
+for, and each source it returns names its own, which `live_data()` runs it on.
+Vendor calls always name their vendor, since an account belongs to one.
 
 ```python
 from web_router import Provider, WebRouter

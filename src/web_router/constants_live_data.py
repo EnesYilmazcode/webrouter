@@ -161,7 +161,7 @@ LIVE_DATA_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 Spelled out rather than imported, because :mod:`web_router.constants` imports
 this module; ``tests/test_live_data_contract.py`` checks each matches the
 variable the provider's other methods read. A live data run fetches and
-parses on the backend's account, so there is no keyless tier, and no ``auto``:
+parses on the backend's account, so there is no keyless tier, and no ``auto`` fallback:
 a source's name belongs to one vendor. Bright Data's live data needs its token
 alone -- the zone is its Web Unlocker's, which a scraper does not use.
 Oxylabs' live data runs on its Web API, whose key is not the Realtime

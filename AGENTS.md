@@ -1103,9 +1103,12 @@ whose schemas are never cut: a cut `input_schema` sends the model guessing at
 the inputs it dropped. A schema or a record that does not fit the budget even
 on its own is left out whole, with a note naming the `fetch_raw` handle that
 holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. There is no
-live data `auto`: a source's name belongs to one vendor, so `provider` is
-required on the three router methods and on the three MCP tools alone, and an
-unknown name raises `LiveDataSourceNotFoundError`, a `ProviderError`. One call
+live data `auto` chain: a source's name belongs to one vendor, so no other
+vendor can stand in for it. `live_data_sources()` with no `provider` searches
+every configured vendor at once and each source names its own; `live_data()`
+and `live_data_source()` take that source whole, while a bare name needs
+`provider` unless one live data backend is configured. An unknown name raises
+`LiveDataSourceNotFoundError`, a `ProviderError`. One call
 is one set of inputs, answered through the vendor's synchronous endpoint under
 that endpoint's own time cap (Apify 300 s, Oxylabs 150 s, Bright Data about a
 minute, past which it raises naming the snapshot to fetch); batch inputs stay

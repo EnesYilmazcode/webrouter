@@ -49,8 +49,10 @@ Choosing a tool:
   when it matters.
 - live_data_sources lists a vendor's ready-made scrapers for a site (pass
   query to search them); live_data_source gives one's input_schema; live_data
-  runs it and returns the site's fields as records, one billed run. All three
-  need provider named.
+  runs it and returns the site's fields as records, one billed run. With
+  provider unset, live_data_sources searches every vendor configured here and
+  each row names its provider; pass that provider to the other two (optional
+  with one vendor).
 - research and browse run for minutes and BILL FOR THE RUN. Start one only
   when the question truly needs it, say so before you do, and never start a
   second run while the first is going — poll research_status or browse_status

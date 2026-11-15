@@ -50,7 +50,9 @@ Work up this ladder and stop at the first rung that serves the task:
    **`live_data`** too: when `live_data_sources` lists a vendor's ready-made
    scraper for the site and item at hand (pass `query` to search the
    catalogue), one run fetches the site now and returns its fields as
-   records, one billed run. All three live data tools need `provider` named.
+   records, one billed run. Leave `provider` out of `live_data_sources` to
+   search every vendor configured here; each row names its `provider`, which
+   `live_data_source` and `live_data` take back (optional with one vendor).
    Read `live_data_source` first — its `input_schema` says exactly what
    `inputs` to pass, a URL for some sources and an id or a search term for
    others.
