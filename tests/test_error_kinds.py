@@ -62,6 +62,13 @@ def test_a_closed_event_loop_is_local_and_says_how_to_fix_it() -> None:
     assert "one AsyncWebRouter per loop" in str(error)
 
 
+def test_a_cause_chain_that_loops_on_itself_is_read_once() -> None:
+    first, second = ConnectionError("Connection error."), ConnectionError("again")
+    first.__cause__, second.__cause__ = second, first
+
+    assert ProviderError("acme", "search failed", original=first).kind == "upstream"
+
+
 def test_a_providers_own_bug_is_local_and_a_timeout_is_a_timeout() -> None:
     assert ProviderError("acme", "bad shape", original=KeyError("results")).kind == "local"
     assert ProviderError("acme", "slow", original=httpx.ReadTimeout("read")).kind == "timeout"

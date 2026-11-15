@@ -85,6 +85,28 @@ def test_a_providers_own_bug_raises_instead_of_moving_on(chain: Callable[..., Au
     assert spare.calls == 0
 
 
+class APIConnectionError(Exception):
+    """Stands in for an SDK's connection error, which wraps the loop's ``RuntimeError`` as its cause."""
+
+
+def _closed_loop() -> APIConnectionError:
+    error = APIConnectionError("Connection error.")
+    error.__cause__ = RuntimeError("Event loop is closed")
+    return error
+
+
+def test_a_client_from_a_closed_loop_raises_instead_of_moving_on(chain: Callable[..., AutoProvider]) -> None:
+    """A reused AsyncWebRouter would otherwise reroute every call through the next, possibly billed, member."""
+    reused, spare = _searcher("reused", _closed_loop), _searcher("spare")
+
+    with pytest.raises(ProviderError) as caught:
+        chain(reused, spare).search(SearchRequest(query="q"))
+
+    assert caught.value.kind == "local"
+    assert "one AsyncWebRouter per loop" in str(caught.value)
+    assert spare.calls == 0
+
+
 def test_a_target_side_failure_raises_instead_of_moving_on(chain: Callable[..., AutoProvider]) -> None:
     gone = _searcher("gone", lambda: ProviderError("gone", "HTTP 400: nx_domain_error"))
     spare = _searcher("spare")

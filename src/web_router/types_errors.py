@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import math
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -131,15 +131,21 @@ def is_retryable(kind: str | None) -> bool:
 
 
 def reused_loop(exc: BaseException | None) -> bool:
-    """Whether ``exc`` is an async client used from an event loop other than the one it was built on."""
-    return isinstance(exc, RuntimeError) and any(marker in str(exc).lower() for marker in LOCAL_LOOP_MARKERS)
+    """Whether ``exc``, or an error it carries as its cause, is an async client used from another event loop.
+
+    An SDK wraps the loop's ``RuntimeError`` in its own connection error, so the chain is read, not just the top.
+    """
+    return any(
+        isinstance(link, RuntimeError) and any(marker in str(link).lower() for marker in LOCAL_LOOP_MARKERS)
+        for link in _chain(exc)
+    )
 
 
 def is_local(exc: BaseException | None) -> bool:
     """Whether ``exc`` came from this side of the call: a provider's own bug, or a client from a closed loop."""
-    if isinstance(exc, RuntimeError):
-        return any(marker in str(exc).lower() for marker in LOCAL_LOOP_MARKERS)
-    return isinstance(exc, LOCAL_ERROR_TYPES)
+    if reused_loop(exc):
+        return True
+    return not isinstance(exc, RuntimeError) and isinstance(exc, LOCAL_ERROR_TYPES)
 
 
 def _status(original: BaseException | None) -> int | None:
@@ -157,12 +163,19 @@ def _connect_failed(original: BaseException | None) -> bool:
 
 def _timed_out(original: BaseException | None) -> bool:
     """Whether ``original``, or an error it carries as its cause (an SDK's connection error), is a timeout."""
-    seen = 0
-    while original is not None and seen < _CAUSE_DEPTH:
-        if isinstance(original, (TimeoutError, asyncio.TimeoutError)) or "timeout" in type(original).__name__.lower():
-            return True
-        original, seen = getattr(original, "__cause__", None) or getattr(original, "__context__", None), seen + 1
-    return False
+    return any(
+        isinstance(link, (TimeoutError, asyncio.TimeoutError)) or "timeout" in type(link).__name__.lower()
+        for link in _chain(original)
+    )
+
+
+def _chain(exc: BaseException | None) -> Iterator[BaseException]:
+    """``exc`` and the errors it carries as its cause (else its context), at most :data:`_CAUSE_DEPTH`, each once."""
+    seen: set[int] = set()
+    while exc is not None and len(seen) < _CAUSE_DEPTH and id(exc) not in seen:
+        seen.add(id(exc))
+        yield exc
+        exc = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
 
 
 def _retry_after(original: BaseException | None) -> float | None:
