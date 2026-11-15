@@ -21,7 +21,7 @@ The order is on the response's ``decision.merged``.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from typing import Any
 
 from web_router._chains import chains
@@ -37,11 +37,16 @@ from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
 
-def cost_ordered(tool: ToolName, names: Sequence[str], request: NormalizedRequest) -> list[str]:
-    """``names`` -- ``tool``'s eligible members in static order -- in cost order within each accuracy tier."""
+def cost_ordered(
+    tool: ToolName, names: Sequence[str], request: NormalizedRequest, unranked: Collection[str] = ()
+) -> list[str]:
+    """``names`` -- ``tool``'s eligible members in static order -- in cost order within each accuracy tier.
+
+    A name in ``unranked`` is not ranked though the benchmark measured a backend of that name: it keeps its place.
+    """
     data = chains().get(tool) or {}
     measured = data.get("measured") or {}
-    accuracy = {name: float(measured[name]["accuracy"]) for name in names if name in measured}
+    accuracy = {name: float(measured[name]["accuracy"]) for name in names if name in measured and name not in unranked}
     if len(accuracy) < 2:
         return list(names)
     floor = float(data["noise_floor"]["value"]) + ACCURACY_TOLERANCE
@@ -69,9 +74,8 @@ def cost_route(
         return None, None
     members = eligible_members(Only(tool, chain), tool, request)[0]
     names = [name for name, _ in members]
-    # a keyless member shares its keyed namesake's measure but not its quality: it stays last, unranked
-    keyed = [name for name, keyless in members if not keyless]
-    ordered = cost_ordered(tool, keyed, request) + [name for name, keyless in members if keyless]
+    # a keyless member shares its keyed namesake's measure but not its quality: unranked, it keeps its place
+    ordered = cost_ordered(tool, names, request, {name for name, keyless in members if keyless})
     if ordered == names:
         return None, None
     record = DecisionRecord(merged=[candidate_id(tool, name) for name in ordered])

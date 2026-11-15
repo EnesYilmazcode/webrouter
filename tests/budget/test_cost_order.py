@@ -17,7 +17,7 @@ from web_router import Budget
 from web_router.providers.auto import AutoProvider
 from web_router.routing import cost_order
 from web_router.routing.cost_order import cost_ordered
-from web_router.types import SearchRequest
+from web_router.types import ExtractRequest, SearchRequest
 
 CAP = Budget(max_cost_usd=1.0)
 
@@ -116,3 +116,15 @@ def test_a_keyless_member_stays_last_though_its_keyed_namesake_is_ranked(
     monkeypatch.setattr(cost_order, "eligible_members", lambda *_: ([("first", False), ("second", True)], {}))
     route, _ = cost_order.cost_route(AutoProvider(), "search", SearchRequest(query="q"), CAP)
     assert route is None, "keyless second is cheaper and shares a measure, yet the keyed member keeps first place"
+
+
+def test_a_member_keyless_by_nature_does_not_jump_the_flagged_keyless_ones(
+    monkeypatch: pytest.MonkeyPatch, priced: Table
+) -> None:
+    _benchmark(monkeypatch, "extract", 0.05, first=0.5, second=0.5)
+    priced.update(first=(0.008, None), second=(0.001, None), third=(None, None))
+    monkeypatch.setattr(cost_order, "_runs_default", lambda _chain: True)
+    members = [("first", True), ("second", True), ("third", False)]  # third: no allow_keyless flag, unmeasured
+    monkeypatch.setattr(cost_order, "eligible_members", lambda *_: (members, {}))
+    route, _ = cost_order.cost_route(AutoProvider(), "extract", ExtractRequest(urls=["https://a.test"]), CAP)
+    assert route is None, "nothing here is ranked: every member keeps its place"

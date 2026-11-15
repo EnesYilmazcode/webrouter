@@ -174,7 +174,8 @@ per event loop.
 The keyless backends (`tavily`'s anonymous tier, `you-mcp`, `exa-mcp`,
 `parallel-mcp`, `keenable`, `jina`) are rate-limited per IP address, and their
 limits are not published. In testing, a few concurrent callers used up some of
-them within about ten calls. `you-mcp` answered keyless at the time of writing,
+them within about ten calls. `nimble`'s keyless tier is capped per caller per
+day and answers 429 once that cap is spent. `you-mcp` answered keyless at the time of writing,
 and answers 402 "Free tier limit exceeded" once its free tier runs out. A service
 whose pods share one egress IP shares those limits: hold a key for at least one
 backend of each method you call, and let the keyless tier be the fallback.
