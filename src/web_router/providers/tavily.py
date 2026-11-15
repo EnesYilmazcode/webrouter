@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import (
+    MSG_SEARCH_FAILED,
     PROVIDER_TAVILY,
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_SEARCH_TIMEOUT,
@@ -37,7 +38,7 @@ from web_router.providers._language import language_code
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.base import SearchProvider
-from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin
+from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin, sdk_errors
 from web_router.providers.tavily_extract import TavilyExtractProvider as TavilyExtractProvider
 from web_router.providers.tavily_extract import clamped_timeout, tavily_key
 from web_router.types import (
@@ -104,11 +105,13 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
         self._clients = TavilyClients(key, api_base_url, kwargs)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        payload = self._client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = self._client.search(**self._build_payload(request))
         return self._to_response(request, payload)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        payload = await self._async_client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = await self._async_client.search(**self._build_payload(request))
         return self._to_response(request, payload)
 
     @classmethod

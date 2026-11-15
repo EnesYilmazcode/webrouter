@@ -76,3 +76,7 @@ MSG_TAVILY_COUNTRY = (
     "Tavily boosts only the countries it lists (166, by name), and only on topic general. Ask for one of those "
     "without another topic, leave country unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
+
+TAVILY_LIMIT_MARKER = "limit"
+"""A word in a ``ForbiddenError``'s text, lowercased, by which Tavily's 432 and 433 say a plan or pay-as-you-go limit
+was reached rather than that the key was refused (a 403): the SDK raises the same exception for all three."""

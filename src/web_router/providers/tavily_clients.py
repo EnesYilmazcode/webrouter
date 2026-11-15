@@ -4,16 +4,65 @@ A sync router never awaits, and an async one never blocks, so building both
 clients up front left one of them unused on every router -- the async router
 held a ``requests`` session it never sent on. Each is built under a lock, so
 two threads making a router's first call at once share one client.
+
+The SDK raises its own exceptions for a refused key, a spent quota or a
+refused request, with no status on them; :func:`sdk_errors` turns each into a
+:class:`~web_router.ProviderError` of the kind its status would have given.
 """
 
 from __future__ import annotations
 
 import threading
-from typing import Any
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Any, Final
 
 from tavily import AsyncTavilyClient, TavilyClient
+from tavily.errors import (
+    BadRequestError,
+    ForbiddenError,
+    InvalidAPIKeyError,
+    KeylessUnsupportedEndpointError,
+    MissingAPIKeyError,
+    TavilyKeylessLimitError,
+    UsageLimitExceededError,
+)
 
+from web_router.constants_tavily import TAVILY_LIMIT_MARKER
+from web_router.exceptions import ProviderError, describe
 from web_router.providers._utils import WarmClients, compact
+from web_router.types_errors import ERROR_KIND_AUTH, ProviderErrorKind
+
+_KIND_BY_SDK_ERROR: Final[tuple[tuple[type[Exception], ProviderErrorKind], ...]] = (
+    (InvalidAPIKeyError, ERROR_KIND_AUTH),  # 401
+    (MissingAPIKeyError, ERROR_KIND_AUTH),
+    (UsageLimitExceededError, "rate_limit"),  # 429, and a keyless call's quota (its subclass)
+    (BadRequestError, "bad_request"),  # 400
+    (KeylessUnsupportedEndpointError, "bad_request"),
+)
+"""The kind of each SDK exception that stands for one HTTP status. ``ForbiddenError`` is read by :func:`_kind`."""
+
+
+def _kind(exc: Exception) -> ProviderErrorKind | None:
+    """``exc``'s kind, when it is one of the SDK's own; ``ForbiddenError`` covers a 403 and the plan limits 432/433."""
+    if isinstance(exc, ForbiddenError):
+        return "rate_limit" if TAVILY_LIMIT_MARKER in str(exc).lower() else ERROR_KIND_AUTH
+    return next((kind for sdk_type, kind in _KIND_BY_SDK_ERROR if isinstance(exc, sdk_type)), None)
+
+
+@contextmanager
+def sdk_errors(provider: str, message: str) -> Iterator[None]:
+    """Raise the SDK's own exceptions as a ``ProviderError`` of their kind, saying ``message``; others pass through."""
+    try:
+        yield
+    except Exception as exc:
+        kind = _kind(exc)
+        if kind is None:
+            raise
+        error = ProviderError(provider, message.format(error=describe(exc)), original=exc, kind=kind)
+        if isinstance(exc, TavilyKeylessLimitError) and exc.retry_after_seconds is not None:
+            error.retry_after = float(exc.retry_after_seconds)
+        raise error from exc
 
 
 class TavilyClients:

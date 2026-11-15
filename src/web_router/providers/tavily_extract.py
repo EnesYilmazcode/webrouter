@@ -16,6 +16,7 @@ from typing import Any, ClassVar
 
 from web_router.constants import (
     ENV_TAVILY_API_KEY,
+    MSG_EXTRACT_FAILED,
     MSG_TAVILY_TOO_LITTLE_TIME,
     PROVIDER_TAVILY,
     TAVILY_EXTRACT_DEFAULT_FORMAT,
@@ -28,7 +29,7 @@ from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import build_payload, resolve_api_key
 from web_router.providers.base import ExtractProvider
-from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin
+from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin, sdk_errors
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
@@ -110,11 +111,13 @@ class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
         self._clients = TavilyClients(key, api_base_url, kwargs)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        payload = self._client.extract(**self._build_payload(request, urls))
+        with sdk_errors(self.name, MSG_EXTRACT_FAILED):
+            payload = self._client.extract(**self._build_payload(request, urls))
         return self._to_response(request, urls, payload)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        payload = await self._async_client.extract(**self._build_payload(request, urls))
+        with sdk_errors(self.name, MSG_EXTRACT_FAILED):
+            payload = await self._async_client.extract(**self._build_payload(request, urls))
         return self._to_response(request, urls, payload)
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
