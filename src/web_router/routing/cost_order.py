@@ -1,7 +1,10 @@
 """``auto``'s order under a cost cap: cheapest first among the backends the benchmark cannot tell apart.
 
-With no router asked and a budget that caps cost, a call on ``auto`` tries its
-members in this order rather than the static one. The rule is the one
+With a budget that caps cost, a call on ``auto`` tries its members in this
+order rather than the static one, unless a router ranks that method's backends
+itself: with no router asked, and on a plan whose router picks the method
+alone, as the default ``rules`` does (the candidates carry it for
+:mod:`.decide`). The rule is the one
 ``make chains`` ranks the static order by (``data/chains.json``): best
 measured accuracy first, and the members within the method's noise floor of
 the most accurate one not yet placed form one tier -- an accuracy gap smaller
@@ -65,7 +68,7 @@ def cost_ordered(
 def cost_route(
     chain: Any, tool: ToolName, request: NormalizedRequest, budget: Budget | None
 ) -> tuple[CallRoute | None, DecisionRecord | None]:
-    """The order a call no router orders runs in under ``budget``, and the record naming it; ``None`` for both
+    """The order a call no router ranks runs in under ``budget``, and the record naming it; ``None`` for both
     when the order is the static one: no cost cap, a backend the caller named, a ``chain`` the caller set, or
     no tier the request's prices reorder.
     """

@@ -165,8 +165,9 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 ```
 
 Every response carries `cost_usd`: the backend's own figure where it states
-one (`cost_source="reported"`), else an estimate. With no router, a cost cap
-makes `auto` try the cheaper of the backends that score alike first.
+one (`cost_source="reported"`), else an estimate. Unless a router ranks the
+backends itself (the default `rules` router does not), a cost cap makes `auto`
+try the cheaper of the backends that score alike first.
 
 Each attempt is checked against what is left before it starts, so parallel
 calls never overspend together, and a backend that does not fit is skipped

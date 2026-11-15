@@ -53,7 +53,9 @@ and `fail_on_router_error=True` raises `RouterError` instead.
 
 Its answer is merged. The method is the first in `tools` that has a backend
 left, else search: without a research key, the snippet's "compare" rule plans
-a search. The backends are its ranking first, then the static order. Only
+a search. The backends are its ranking first, then the static order; a router
+that ranks none of them leaves `auto`'s order, cheapest first under a cost cap
+([Cost and budgets](/budgets#cheapest-first-under-a-cost-cap)). Only
 `exclude` removes a backend, never the last one, and a router may set only
 search's `max_results` and `search_depth`, research's `effort`, and the URLs
 for extract and browse -- never an option you set yourself. Each option is
@@ -176,7 +178,8 @@ The library ships one keyless router, `rules`, attached unless you pass
 with a URL is extracted; one asking in so many words for a report, a comparison
 or an in-depth analysis is researched, or searched when no research backend is
 configured; anything else is searched. It reads English phrases, never single
-words like "why" or "list", and never picks `browse` or `answer`. It also ships
+words like "why" or "list", and never picks `browse` or `answer`. It ranks no
+backends, so under a cost cap they run cheapest first. It also ships
 two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](/smart-routing#decision-apis).

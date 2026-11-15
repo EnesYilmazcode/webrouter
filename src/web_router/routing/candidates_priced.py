@@ -36,6 +36,7 @@ class Found:
     unmeasured: list[str] = field(default_factory=list)
     seen: set[str] = field(default_factory=set)
     priced: dict[ToolName, NormalizedRequest] = field(default_factory=dict)
+    cost_order: dict[ToolName, list[str]] = field(default_factory=dict)
 
 
 def price_members(
