@@ -42,7 +42,6 @@ from web_router.mcp.redaction import redact as redact  # re-exported: callers im
 from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
-    BrowseProgress,
     BrowseResponse,
     Citation,
     ExtractResponse,
@@ -50,6 +49,7 @@ from web_router.types import (
     ResearchResponse,
     SearchResponse,
 )
+from web_router.types_browse import BrowseProgress
 
 
 def max_response_chars() -> int:

@@ -46,7 +46,6 @@ from web_router.providers._deadline import call_deadline
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.routing.contract import Budget, Plan
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     ExtractResponse,
@@ -57,6 +56,7 @@ from web_router.types import (
     SearchResponse,
 )
 from web_router.types_answer import AnswerResponse
+from web_router.types_browse import BrowseProgress
 from web_router.types_decision import DecisionRecord
 
 if TYPE_CHECKING:

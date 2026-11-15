@@ -91,7 +91,6 @@ from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_win
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -112,6 +111,7 @@ from web_router.types import (
     SearchResponse,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
@@ -397,7 +397,7 @@ class _Collected:
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        documents, error_pages = split_error_pages(response.documents)
+        documents, error_pages = split_error_pages(response.documents, urls[0] if len(urls) == 1 else None)
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
