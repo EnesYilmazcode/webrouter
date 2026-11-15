@@ -726,6 +726,12 @@ So a shaped result:
 - **never inlines `raw`**;
 - says in the result itself that it was shortened, and which handle gets the
   rest;
+- keeps what the call cost and how long it took, as the library's response
+  carries them: `elapsed_s` (seconds, to two decimals), `cost_usd` and
+  `cost_source` (`reported` by the backend or `estimated` from list prices) on
+  a search, extract, answer, research or browse result — a finished
+  `research_status` or `browse_status` included — and left out when unknown.
+  No cut ever touches them;
 - comes back as JSON text and, for a client that reads it, the same object as
   `structuredContent`.
 

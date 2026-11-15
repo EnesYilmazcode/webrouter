@@ -40,6 +40,7 @@ from web_router.constants import (
 from web_router.constants_mcp_context import MCP_EMPTY_VALUES, MCP_JSON_SEPARATORS
 from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
 from web_router.mcp.redaction import redaction_note as redaction_note
+from web_router.mcp.shaping_cost import cost_fields
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     BrowseResponse,
@@ -55,9 +56,8 @@ from web_router.types_browse import BrowseProgress
 def max_response_chars() -> int:
     """How large one shaped result may be, from the environment or the default.
 
-    An unparseable value falls back to the default rather than raising: a stdio
-    server that refuses to start over a typo in a client config file is worse
-    than one that quietly uses its own number.
+    An unparseable value falls back to the default rather than raising: a stdio server that
+    refuses to start over a typo in a client config is worse than one using its own number.
     """
     try:
         return int(os.environ[ENV_MCP_MAX_CHARS])
@@ -68,8 +68,7 @@ def max_response_chars() -> int:
 def render(payload: Any) -> str:
     """Serialize a shaped result the way the tool returns it.
 
-    The same function the budget is measured against, so the cap counts the
-    characters that actually reach the client rather than an estimate of them.
+    The budget is measured with it too, so the cap counts the characters that reach the client.
     """
     return json.dumps(payload, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str)
 
@@ -105,8 +104,7 @@ def truncate(text: str, limit: int) -> str:
 class ToolOutput:
     """A result that is more than one JSON object: a snapshot's tree as its own text, or a screenshot.
 
-    ``payload`` is rendered as every other tool's result is; ``text`` follows it
-    as a second, unescaped text block, and ``png`` as image content.
+    ``payload`` is rendered as every other result is; ``text`` follows as an unescaped text block, ``png`` as an image.
     """
 
     payload: dict[str, Any]
@@ -127,9 +125,8 @@ class Record:
 class HandleStore:
     """The session's handles, oldest evicted first.
 
-    Bounded because an MCP session outlives any one call: a conversation that
-    searches two hundred times would otherwise hold two hundred untouched
-    payloads for as long as the client stays connected.
+    Bounded because an MCP session outlives any one call: a conversation that searches two
+    hundred times would otherwise hold two hundred untouched payloads while it stays connected.
     """
 
     def __init__(self, limit: int = MCP_HANDLE_LIMIT) -> None:
@@ -187,6 +184,7 @@ def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[
             "result_count": len(response.results),
             "results": results,
             "data_apis": [match.brief() for match in response.data_apis],
+            **cost_fields(response),
         }
     )
     shortened = answer != response.answer
@@ -213,6 +211,7 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
             "document_count": len(response.documents),
             "documents": documents,
             "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
+            **cost_fields(response),
         }
     )
     return _fit(payload, documents, ("content",), handle=handle, budget=budget)
@@ -249,6 +248,7 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
             "answer": answer,
             "structured": response.structured,
             "citations": citations,
+            **cost_fields(response),
         },
         whole=("structured",),
     )
@@ -281,6 +281,7 @@ def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[
             "recording_url": response.recording_url,
             "step_count": len(response.steps),
             "steps": steps,
+            **cost_fields(response),
         },
         whole=("structured",),
     )
@@ -335,11 +336,10 @@ def _fit(
 ) -> dict[str, Any]:
     """Shrink a shaped payload until it serializes inside ``budget``, and say so if it did.
 
-    ``extra_note`` is appended to the note, and sets one on its own when nothing
-    was cut; it is inside the loop so the budget counts it. ``main`` says whether
-    the items' text is the result's main content, so that cutting it sets
-    ``truncated``; when it is not -- a search result's text, a citation's
-    snippet -- only a cut answer (``shortened``) or a dropped item does.
+    ``extra_note`` is appended to the note, and sets one on its own when nothing was cut; it is
+    inside the loop so the budget counts it. ``main`` says whether the items' text is the result's
+    main content, so that cutting it sets ``truncated``; when it is not -- a search result's text,
+    a citation's snippet -- only a cut answer (``shortened``) or a dropped item does.
 
     Long text goes first: each item gets an equal share of the budget, lowered
     until the payload fits. Only at :data:`MCP_MIN_FIELD_CHARS` are whole items

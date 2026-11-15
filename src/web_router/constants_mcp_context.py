@@ -72,3 +72,9 @@ MCP_OUTPUT_SCHEMAS: dict[str, dict[str, Any]] = {
 
 A key with nothing in it is left out, so only ``handle`` is required.
 """
+
+MCP_ELAPSED_DIGITS = 2
+"""Decimal places a shaped result keeps of ``elapsed_s``: hundredths of a second is all a reader acts on."""
+
+MCP_COST_DIGITS = 6
+"""Decimal places a shaped result keeps of ``cost_usd``: a millionth of a dollar, past any per-call price."""

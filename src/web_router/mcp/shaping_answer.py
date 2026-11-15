@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from web_router.mcp.shaping import _cut_answer, _fit, compact
+from web_router.mcp.shaping_cost import cost_fields
 from web_router.types import Citation
 from web_router.types_answer import AnswerResponse
 
@@ -42,6 +43,7 @@ def shape_answer(
             "answer": answer,
             "citations": rows,
             "uncited_sources": len(response.citations) - len(shown) or None,
+            **cost_fields(response),
         }
     )
     shortened = answer != response.answer
