@@ -40,7 +40,9 @@ holding it ends:
     ...     tree = browser.snapshot().tree
 """
 
+from web_router import _exports_registry
 from web_router import live_data_compat as _live_data_compat
+from web_router._exports_registry import *  # noqa: F403  (the registry's names, in its __all__)
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.client_scope import AsyncBudgetScope, BudgetScope
@@ -85,38 +87,6 @@ from web_router.providers.base import (
     ResearchProvider,
     SearchProvider,
 )
-from web_router.registry import (
-    available_browse_providers,
-    available_browser_providers,
-    available_extract_providers,
-    available_live_data_providers,
-    available_providers,
-    available_research_providers,
-    configured_browse_providers,
-    configured_browser_providers,
-    configured_extract_providers,
-    configured_live_data_providers,
-    configured_providers,
-    configured_research_providers,
-    register_browse_provider,
-    register_browser_provider,
-    register_extract_provider,
-    register_live_data_provider,
-    register_provider,
-    register_research_provider,
-    unregister_browse_provider,
-    unregister_browser_provider,
-    unregister_extract_provider,
-    unregister_live_data_provider,
-    unregister_provider,
-    unregister_research_provider,
-)
-from web_router.registry_answer import (
-    available_answer_providers,
-    configured_answer_providers,
-    register_answer_provider,
-    unregister_answer_provider,
-)
 from web_router.routing import (
     Budget,
     Candidate,
@@ -127,10 +97,12 @@ from web_router.routing import (
     RouterLike,
     ToolName,
 )
+from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
 from web_router.routing.registry import available_routers, register_router, unregister_router
+from web_router.spend import SpendEntry, SpendLog, SpendRow, SpendSink, spend_report
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -167,6 +139,7 @@ from web_router.types import (
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_browse import BrowseProgress
+from web_router.types_cost import CostSource
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
@@ -221,6 +194,7 @@ __all__ = [
     "Citation",
     "CompositeDecision",
     "ConfigurationError",
+    "CostSource",
     "DeadlineExceededError",
     "Decider",
     "DeciderQuestion",
@@ -282,6 +256,10 @@ __all__ = [
     "SearchRequest",
     "SearchResponse",
     "SearchResult",
+    "SpendEntry",
+    "SpendLog",
+    "SpendRow",
+    "SpendSink",
     "StaleElementError",
     "StealthLevel",
     "ToolName",
@@ -297,38 +275,13 @@ __all__ = [
     "WebRouter",
     "WebRouterError",
     "__version__",
-    "available_answer_providers",
-    "available_browse_providers",
-    "available_browser_providers",
-    "available_extract_providers",
-    "available_live_data_providers",
-    "available_providers",
-    "available_research_providers",
     "available_routers",
-    "configured_answer_providers",
-    "configured_browse_providers",
-    "configured_browser_providers",
-    "configured_extract_providers",
-    "configured_live_data_providers",
-    "configured_providers",
-    "configured_research_providers",
-    "register_answer_provider",
-    "register_browse_provider",
-    "register_browser_provider",
-    "register_extract_provider",
-    "register_live_data_provider",
-    "register_provider",
-    "register_research_provider",
+    "cheapest_first",
     "register_router",
-    "unregister_answer_provider",
-    "unregister_browse_provider",
-    "unregister_browser_provider",
-    "unregister_extract_provider",
-    "unregister_live_data_provider",
-    "unregister_provider",
-    "unregister_research_provider",
+    "spend_report",
     "unregister_router",
 ]
+__all__ += _exports_registry.__all__
 
 
 _live_data_compat.install()

@@ -75,6 +75,7 @@
           "mcp",
           "integrations",
           "agent-prompt",
+          "budgets",
           "smart-routing"
         ]
       },
