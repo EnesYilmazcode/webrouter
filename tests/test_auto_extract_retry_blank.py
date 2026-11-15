@@ -34,4 +34,7 @@ def test_a_url_a_later_member_answered_under_another_address_stays_failed(regist
     finally:
         auto.close()
 
-    assert [(failure.url, failure.error) for failure in response.failures] == [(GITHUB, "[first] HTTP 403")]
+    # The one URL retried owns what came back, even under another address: a blank page there is its second failure.
+    assert [(failure.url, failure.error) for failure in response.failures] == [
+        (GITHUB, "[first] HTTP 403; then [second] returned a blank page")
+    ]

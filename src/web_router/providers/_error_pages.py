@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import html
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from http import HTTPStatus
-from urllib.parse import urldefrag, urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
@@ -28,6 +28,7 @@ from web_router.constants_extract import (
     MSG_EXTRACT_LOGIN_WALL,
     MSG_EXTRACT_NEAR_EMPTY,
 )
+from web_router.providers._url_match import bare_url, owners
 from web_router.types import ExtractedDocument, ExtractFailure
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
 
@@ -42,20 +43,14 @@ def _failure(document: ExtractedDocument, reason: str, asked: str | None = None)
     """
     status = document.status_code
     # A redirect that landed on an error page says nothing certain about the URL asked for: another backend may read it.
-    redirected = asked is not None and _bare(asked) != _bare(document.url)
+    redirected = asked is not None and bare_url(asked) != bare_url(document.url)
     gone = status in TARGET_GONE_STATUSES and not redirected
     kind = ERROR_KIND_TARGET if gone else ERROR_KIND_UPSTREAM
     return ExtractFailure(url=asked or document.url, error=reason, kind=kind, status_code=status)
 
 
-def _bare(url: str) -> str:
-    """``url`` as a backend may echo what it fetched: scheme and host lower-cased, no fragment, no trailing slash."""
-    parts = urlsplit(urldefrag(url).url)
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
-
-
 def split_error_pages(
-    documents: Iterable[ExtractedDocument], asked: str | None = None
+    documents: Iterable[ExtractedDocument], asked: str | Sequence[str] | None = None, reported: Iterable[str] = ()
 ) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
     """The documents worth returning, and each page that is not the one asked for as a failure saying why.
 
@@ -64,16 +59,21 @@ def split_error_pages(
     near-empty page is kept, with :data:`MSG_EXTRACT_NEAR_EMPTY` in its
     ``warnings``, since some real answers are that short.
 
-    ``asked`` is the one URL the call carried, when it carried one: a failure is
-    named by it rather than by where a redirect landed, so the caller sees the
-    address they asked for and ``auto`` retries that address.
+    ``asked`` is the URL, or the batch of URLs, the call carried: a failure is
+    named by the one it answers rather than by where a redirect landed, so the
+    caller sees the address they asked for and ``auto`` retries that address.
+    In a batch that is told as :func:`~._url_match.owners` tells it, with
+    ``reported`` the URLs the backend itself reported failed.
     """
+    pages = list(documents)
+    urls = [asked] if isinstance(asked, str) else list(asked or ())
+    named = owners([page.url for page in pages], urls, reported) if urls else [None] * len(pages)
     kept: list[ExtractedDocument] = []
     failed: list[ExtractFailure] = []
-    for document in documents:
+    for document, owner in zip(pages, named, strict=True):
         reason = not_the_page(document)
         if reason is not None:
-            failed.append(_failure(document, reason, asked))
+            failed.append(_failure(document, reason, owner))
         else:
             kept.append(_warned(document))
     return kept, failed

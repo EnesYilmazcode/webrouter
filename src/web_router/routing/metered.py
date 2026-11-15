@@ -18,11 +18,12 @@ response leaves through :func:`metered`:
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from web_router.constants_cost import COST_ESTIMATED
+from web_router.constants_cost import COST_ESTIMATED, COST_REPORTED
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import ToolName
 from web_router.routing.pricing import attempt_cost
@@ -46,3 +47,25 @@ def estimated_cost(tool: ToolName, provider: str | None, request: NormalizedRequ
     if not provider:
         return None
     return attempt_cost(Attempt(tool=tool, provider=provider_name(provider), request=request))
+
+
+def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedRequest]]) -> dict[str, Any]:
+    """The cost fields of one answer several backends' calls made together: each call's cost, summed.
+
+    A part's cost is its own ``cost_usd`` when set, else the estimate for its
+    backend and request. ``reported`` only when every part reported its own;
+    nothing when any part's cost is unknown, which :func:`metered` then fills.
+    """
+    costs = [
+        getattr(response, "cost_usd", None)
+        if getattr(response, "cost_usd", None) is not None
+        else estimated_cost(tool, getattr(response, "provider", None), request)
+        for response, request in parts
+    ]
+    if any(cost is None for cost in costs):
+        return {}
+    reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response, _ in parts)
+    return {
+        "cost_usd": sum(cost for cost in costs if cost is not None),
+        "cost_source": COST_REPORTED if reported else COST_ESTIMATED,
+    }

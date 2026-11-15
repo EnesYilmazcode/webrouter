@@ -53,9 +53,10 @@ def test_a_sites_own_403_through_nimble_is_no_refused_key(caplog: pytest.LogCapt
 
 def test_a_retry_reads_by_the_exact_url_asked_for() -> None:
     from web_router.providers._auto_extract_chain import _merged
-    from web_router.types import ExtractedDocument, ExtractResponse
+    from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 
     page, slashed = "https://a.test/p", "https://a.test/p/"
+    both = ExtractRequest(urls=[page, slashed])
     first = ExtractResponse(
         provider="one", failures=[ExtractFailure(url=page, error="down"), ExtractFailure(url=slashed, error="down")]
     )
@@ -64,15 +65,15 @@ def test_a_retry_reads_by_the_exact_url_asked_for() -> None:
         documents=[ExtractedDocument(url=page, content="hi")],
         failures=[ExtractFailure(url=slashed, error="blocked")],
     )
-    merged = _merged(first, second, [page, slashed])
+    merged = _merged(first, second, [page, slashed], both)
     assert [failure.url for failure in merged.failures] == [slashed]
     assert merged.failures[0].error == "down; then blocked"
 
     other = ExtractResponse(provider="two", documents=[ExtractedDocument(url="https://b.test/p", content="hi")])
-    assert [f.url for f in _merged(first, other, [page, slashed]).failures] == [page, slashed]
+    assert [f.url for f in _merged(first, other, [page, slashed], both).failures] == [page, slashed]
     lone = ExtractResponse(provider="one", failures=[ExtractFailure(url=page, error="down")])
     rewritten = ExtractResponse(provider="two", documents=[ExtractedDocument(url=slashed, content="hi")])
-    assert _merged(lone, rewritten, [page]).failures == []
+    assert _merged(lone, rewritten, [page], ExtractRequest(urls=[page])).failures == []
 
 
 @pytest.mark.parametrize("provider", ["apify", "brightdata", "oxylabs"])
@@ -98,14 +99,16 @@ def test_a_deadline_on_retry_is_a_timeout_and_a_provider_error_keeps_its_kind() 
 
 def test_a_rewritten_url_that_could_be_either_of_two_asked_for_clears_neither() -> None:
     from web_router.providers._auto_extract_chain import _merged
-    from web_router.types import ExtractedDocument, ExtractResponse
+    from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 
     lower, upper = "https://a.test/p", "https://A.test/p"
     first = ExtractResponse(
         provider="one", failures=[ExtractFailure(url=lower, error="down"), ExtractFailure(url=upper, error="down")]
     )
     second = ExtractResponse(provider="two", documents=[ExtractedDocument(url="https://a.test/p/", content="hi")])
-    assert [failure.url for failure in _merged(first, second, [lower, upper]).failures] == [lower, upper]
+    assert [
+        failure.url for failure in _merged(first, second, [lower, upper], ExtractRequest(urls=[lower, upper])).failures
+    ] == [lower, upper]
 
 
 def test_a_batch_with_mixed_statuses_names_none_of_them() -> None:
@@ -146,7 +149,7 @@ def test_a_gone_page_echoed_without_its_fragment_is_still_gone() -> None:
 
 def test_a_rewrite_on_retry_matches_only_the_urls_it_was_sent() -> None:
     from web_router.providers._auto_extract_chain import _merged
-    from web_router.types import ExtractedDocument, ExtractResponse
+    from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 
     page, slashed = "https://a.test/p", "https://a.test/p/"
     first = ExtractResponse(
@@ -155,4 +158,4 @@ def test_a_rewrite_on_retry_matches_only_the_urls_it_was_sent() -> None:
         failures=[ExtractFailure(url=slashed, error="down")],
     )
     second = ExtractResponse(provider="two", documents=[ExtractedDocument(url=page, content="hi again")])
-    assert _merged(first, second, [page, slashed]).failures == []
+    assert _merged(first, second, [page, slashed], ExtractRequest(urls=[page, slashed])).failures == []

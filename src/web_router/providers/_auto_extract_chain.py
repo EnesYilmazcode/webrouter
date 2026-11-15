@@ -15,15 +15,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from urllib.parse import urlsplit, urlunsplit
 
 from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
+from web_router.providers._url_match import asked_for, owners
 from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, contributed, failed
+from web_router.routing.metered import combined_cost
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
@@ -54,7 +55,7 @@ def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) ->
             return _also_failed(response, exc)
         if not _empty_extract(retried):
             contributed("extract", retried.provider)
-        response = _merged(response, retried, urls)
+        response = _merged(response, retried, urls, request)
     return response
 
 
@@ -70,7 +71,7 @@ async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[s
             return _also_failed(response, exc)
         if not _empty_extract(retried):
             contributed("extract", retried.provider)
-        response = _merged(response, retried, urls)
+        response = _merged(response, retried, urls, request)
     return response
 
 
@@ -144,37 +145,27 @@ def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractRespo
     return response.model_copy(update={"failures": failures})
 
 
-def _same(url: str) -> str:
-    """``url`` as a backend may hand it back: scheme and host in lower case, no fragment, no trailing slash."""
-    parts = urlsplit(url)
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
-
-
-def _asked(url: str, urls: list[str]) -> set[str]:
-    """The requested URLs ``url`` stands for: itself when asked for exactly, else those a backend rewrote into it."""
-    if url in urls:
-        return {url}
-    # A rewrite that could be either of two URLs asked for proves neither was read.
-    matches = {asked for asked in urls if _same(asked) == _same(url)}
-    return matches if len(matches) == 1 else set()
-
-
-def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
+def _merged(
+    first: ExtractResponse, retried: ExtractResponse, urls: list[str], request: ExtractRequest
+) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons.
 
-    A blank page ``retried`` held was not read, and a URL it named neither way (a redirect's address) stays
-    failed; one a backend only rewrote (case, trailing slash) counts as the one it was sent for.
+    Each page ``retried`` returned is matched to the URL it was sent for (:func:`~._url_match.owners`); a blank
+    one was not read, and one no sent URL can be told for is left out rather than returned beside that URL's
+    failure. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
     """
     sent = [failure.url for failure in first.failures]  # only these went on the retry
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
-    read = [document for document in retried.documents if document.content.strip()]
-    blanks = [ExtractFailure(url=d.url, error=blank) for d in retried.documents if not d.content.strip()]
+    named = owners([document.url for document in retried.documents], sent, [f.url for f in retried.failures])
+    pages = list(zip(retried.documents, named, strict=True))
+    read = [document for document, owner in pages if owner and document.content.strip()]
+    blanks = [ExtractFailure(url=owner or d.url, error=blank) for d, owner in pages if not d.content.strip()]
     again = {
         asked: failure
         for failure in [*blanks, *retried.failures]
-        for asked in _asked(failure.url, sent) or {failure.url}
+        for asked in asked_for(failure.url, sent) or {failure.url}
     }
-    found = {asked for document in read for asked in _asked(document.url, sent)}
+    found = {owner for document, owner in pages if owner and document.content.strip()}
     failures = [
         failure.model_copy(
             update={
@@ -189,7 +180,7 @@ def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -
         if failure.url in again or failure.url not in found
     ]
     known = {failure.url for failure in first.failures}
-    failures.extend(failure for failure in retried.failures if not (_asked(failure.url, sent) & known))
+    failures.extend(failure for failure in retried.failures if not (asked_for(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
     documents = sorted([*first.documents, *read], key=lambda document: position.get(document.url, len(urls)))
     return first.model_copy(
@@ -197,5 +188,10 @@ def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -
             "documents": documents,
             "failures": failures,
             "raw": [*(first.raw or []), *(retried.raw or [])] or None,
+            **combined_cost("extract", [(first, _for(request, urls)), (retried, _for(request, sent))]),
         }
     )
+
+
+def _for(request: ExtractRequest, urls: list[str]) -> ExtractRequest:
+    return request.model_copy(update={"urls": urls})
