@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from web_router._dotenv import with_dotenv_hint
 from web_router.constants import MSG_UNKNOWN_PROVIDER
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
 from web_router.constants_providers import MSG_PROVIDER_WRONG_METHOD
@@ -35,7 +36,8 @@ class NoAnswerProviderError(ProviderNotFoundError):
     A :class:`ProviderNotFoundError`, so an ``except`` for that still catches it.
     :attr:`configured` names the answer backends with a key -- several, so which
     to call is the caller's choice -- and when there are none, :attr:`env_vars`
-    names the variables that would add one.
+    names the variables that would add one, and the message points at a
+    ``.env`` that sets one but was never loaded, as a :class:`ConfigurationError` does.
     """
 
     def __init__(self, default: str, available: Iterable[str], configured: Iterable[str], env_vars: Iterable[str]):
@@ -49,4 +51,4 @@ class NoAnswerProviderError(ProviderNotFoundError):
             )
         else:
             message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(self.env_vars) or "none")
-        WebRouterError.__init__(self, message)
+        WebRouterError.__init__(self, *with_dotenv_hint((message,)))

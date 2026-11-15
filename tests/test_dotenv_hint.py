@@ -8,8 +8,10 @@ from pathlib import Path
 
 import pytest
 
+from web_router import WebRouter
 from web_router._dotenv import dotenv_hint, nearest_dotenv
-from web_router.exceptions import ConfigurationError
+from web_router.constants import ANSWER_ENV_BY_PROVIDER
+from web_router.exceptions import ConfigurationError, NoAnswerProviderError, ProviderNotFoundError
 
 KEY = "WR_TEST_DOTENV_KEY"
 
@@ -75,3 +77,18 @@ def test_a_word_in_the_message_is_not_taken_for_a_variable(tmp_path: Path, monke
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(KEY, raising=False)
     assert ".env exists" not in str(ConfigurationError.missing_api_key("nimble", KEY))
+
+
+def test_answer_with_no_backend_names_the_unread_dotenv(project: Path) -> None:
+    error = NoAnswerProviderError("auto", ["perplexity"], configured=[], env_vars=[KEY])
+    assert f"A .env exists at {(project / '.env').resolve()} and sets {KEY}" in str(error)
+    assert isinstance(error, ProviderNotFoundError)
+
+
+def test_answer_auto_with_its_key_only_in_a_dotenv_says_so(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / ".env").write_text("PERPLEXITY_API_KEY=abc\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    for env_var in {var for names in ANSWER_ENV_BY_PROVIDER.values() for var in names}:
+        monkeypatch.delenv(env_var, raising=False)
+    with WebRouter() as router, pytest.raises(NoAnswerProviderError, match="sets PERPLEXITY_API_KEY"):
+        router.answer("q")
