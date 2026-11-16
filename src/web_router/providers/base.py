@@ -90,6 +90,7 @@ from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_win
 from web_router.providers._error_pages import named_failures, split_error_pages
 from web_router.providers._exhausted import nothing_returned
 from web_router.providers._page import AsyncPage, SyncPage
+from web_router.routing.metered import collected_cost
 from web_router.types import (
     BrowseRequest,
     BrowseResponse,
@@ -390,20 +391,18 @@ class _Collected:
         self.served_by: str | None = None
         self.documents: list[ExtractedDocument] = []
         self.failures: list[ExtractFailure] = []
-        self.payloads: list[dict[str, Any]] = []
-        self.request_id: str | None = None
+        self.answers: list[ExtractResponse] = []  # each answer as it came: its payloads, request id and cost
         self.reported = 0  # failures a backend reported in an answer, not a call that raised
         self.errors: list[tuple[list[str], ProviderError | DeadlineExceededError]] = []
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
+        self.answers.append(response)
         response = named_failures(response, urls)
         documents, error_pages = split_error_pages(response.documents, urls, [f.url for f in response.failures])
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
-        self.payloads.extend(response.raw or [])
-        self.request_id = self.request_id or response.request_id
         self._account_for(urls, response)
 
     def _account_for(self, urls: list[str], response: ExtractResponse) -> None:
@@ -436,8 +435,9 @@ class _Collected:
             provider=self.served_by or self.provider,
             documents=self._in_request_order(),
             failures=self.failures,
-            request_id=self.request_id,
-            raw=self.payloads or None,
+            request_id=next((answer.request_id for answer in self.answers if answer.request_id), None),
+            raw=[payload for answer in self.answers for payload in answer.raw or []] or None,
+            **collected_cost(self.answers),  # a retry's summed cost (`auto`), or each call's of a fan-out
         )
 
     def _in_request_order(self) -> list[ExtractedDocument]:

@@ -74,3 +74,22 @@ def _part_cost(tool: ToolName, response: BaseModel, request: NormalizedRequest) 
     if cost is not None or "cost_usd" in response.model_fields_set:  # a part unpriced in combined_cost
         return cost
     return estimated_cost(tool, getattr(response, "provider", None), request)
+
+
+def collected_cost(responses: Sequence[BaseModel]) -> dict[str, Any]:
+    """The cost fields of one answer built from several of a backend's answers: theirs summed, when each states one.
+
+    A part that states nothing leaves the whole to :func:`metered`'s estimate,
+    as before; a part left unknown on purpose (:func:`combined_cost`) leaves
+    the whole unknown.
+    """
+    if not responses or any("cost_usd" not in response.model_fields_set for response in responses):
+        return {}
+    costs = [getattr(response, "cost_usd", None) for response in responses]
+    if any(cost is None for cost in costs):
+        return {"cost_usd": None, "cost_source": None}
+    reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response in responses)
+    return {
+        "cost_usd": sum(cost for cost in costs if cost is not None),
+        "cost_source": COST_REPORTED if reported else COST_ESTIMATED,
+    }
