@@ -28,6 +28,7 @@ from web_router.constants_production import (
     MSG_COOLING_DOWN,
 )
 from web_router.exceptions import ProviderError
+from web_router.types_errors import ERROR_KIND_RATE_LIMIT as _RATE_LIMIT
 
 if TYPE_CHECKING:
     from web_router.providers._runtime import Runtime
@@ -35,8 +36,6 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
-
-_RATE_LIMIT = "rate_limit"
 
 
 class Cooldowns:

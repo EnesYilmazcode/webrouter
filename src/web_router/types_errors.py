@@ -30,23 +30,31 @@ ProviderErrorKind = Literal["auth", "rate_limit", "bad_request", "not_found", "t
 - ``upstream``: anything else the backend did: a 5xx, a dropped connection, an answer that could not be read.
 """
 
-RETRYABLE_KINDS: Final = frozenset({"rate_limit", "timeout", "upstream"})
+ERROR_KIND_AUTH: Final[ProviderErrorKind] = "auth"
+ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
+ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
+ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
+ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
+ERROR_KIND_NOT_FOUND: Final[ProviderErrorKind] = "not_found"
+ERROR_KIND_RATE_LIMIT: Final[ProviderErrorKind] = "rate_limit"
+ERROR_KIND_BAD_REQUEST: Final[ProviderErrorKind] = "bad_request"
+RETRYABLE_KINDS: Final = frozenset({ERROR_KIND_RATE_LIMIT, ERROR_KIND_TIMEOUT, ERROR_KIND_UPSTREAM})
 """The kinds a later retry, of the same backend or another, may get past."""
 
-CHAIN_STOPPING_KINDS: Final = frozenset({"local", "target"})
+CHAIN_STOPPING_KINDS: Final = frozenset({ERROR_KIND_LOCAL, ERROR_KIND_TARGET})
 """The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 RETRY_AFTER_HEADER: Final = "retry-after"
 _CAUSE_DEPTH: Final = 4
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
-    400: "bad_request",
-    401: "auth",
-    402: "rate_limit",
-    403: "auth",
-    404: "not_found",
-    408: "timeout",
-    422: "bad_request",
-    429: "rate_limit",
+    400: ERROR_KIND_BAD_REQUEST,
+    401: ERROR_KIND_AUTH,
+    402: ERROR_KIND_RATE_LIMIT,
+    403: ERROR_KIND_AUTH,
+    404: ERROR_KIND_NOT_FOUND,
+    408: ERROR_KIND_TIMEOUT,
+    422: ERROR_KIND_BAD_REQUEST,
+    429: ERROR_KIND_RATE_LIMIT,
 }
 """An HTTP status's kind; any other 4xx is ``bad_request`` and any 5xx ``upstream``."""
 
@@ -71,15 +79,7 @@ LOCAL_ERROR_TYPES: Final = (KeyError, TypeError, AttributeError, NameError, Asse
 TARGET_GONE_STATUSES: Final = frozenset({404, 410})
 """A page's own status that says it is not there, whichever backend fetched it."""
 
-ERROR_KIND_AUTH: Final[ProviderErrorKind] = "auth"
-ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
-ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
-ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
-ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
-ERROR_KIND_NOT_FOUND: Final[ProviderErrorKind] = "not_found"
-ERROR_KIND_RATE_LIMIT: Final[ProviderErrorKind] = "rate_limit"
-ERROR_KIND_BAD_REQUEST: Final[ProviderErrorKind] = "bad_request"
-_RECOVERABLE_FIRST: Final[tuple[ProviderErrorKind, ...]] = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, "rate_limit")
+_RECOVERABLE_FIRST: Final = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, ERROR_KIND_RATE_LIMIT)
 """The kinds a mixed batch takes, most recoverable first: another backend may read what these failed."""
 
 
@@ -111,14 +111,14 @@ def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     text = f"{message} {original if original is not None else ''}".lower()
     retry_after = _retry_after(original)
     by_status = KIND_BY_STATUS.get(status) if status is not None else None
-    if by_status in ("auth", "rate_limit"):
+    if by_status in (ERROR_KIND_AUTH, ERROR_KIND_RATE_LIMIT):
         # A refused key or a throttle is the backend's answer about the caller, whatever its body goes on to say.
         return ErrorFacts(by_status, status, retry_after)
     # A failure to reach the backend itself says nothing about the page, whatever its text.
     if not _connect_failed(original) and any(marker in text for marker in TARGET_MARKERS):
         return ErrorFacts(ERROR_KIND_TARGET, status, retry_after)
     if status is not None:
-        kind = KIND_BY_STATUS.get(status) or ("bad_request" if status < 500 else ERROR_KIND_UPSTREAM)
+        kind = KIND_BY_STATUS.get(status) or (ERROR_KIND_BAD_REQUEST if status < 500 else ERROR_KIND_UPSTREAM)
         return ErrorFacts(kind, status, retry_after)
     if _timed_out(original):
         return ErrorFacts(ERROR_KIND_TIMEOUT)
@@ -166,7 +166,7 @@ def _connect_failed(original: BaseException | None) -> bool:
 def _timed_out(original: BaseException | None) -> bool:
     """Whether ``original``, or an error it carries as its cause (an SDK's connection error), is a timeout."""
     return any(
-        isinstance(link, (TimeoutError, asyncio.TimeoutError)) or "timeout" in type(link).__name__.lower()
+        isinstance(link, (TimeoutError, asyncio.TimeoutError)) or ERROR_KIND_TIMEOUT in type(link).__name__.lower()
         for link in _chain(original)
     )
 
