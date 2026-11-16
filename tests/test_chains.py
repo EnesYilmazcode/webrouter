@@ -27,6 +27,7 @@ README_NAMES = {
     "DeepSeek": "deepseek",
     "Valyu": "valyu",
     "Seltz": "seltz",
+    "Octen": "octen",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
     "Tavily LiteLLM": "tavily-litellm",

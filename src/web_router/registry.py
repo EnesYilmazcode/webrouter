@@ -39,6 +39,7 @@ from web_router.constants import (
     PROVIDER_LINKUP,
     PROVIDER_MAX,
     PROVIDER_NIMBLE,
+    PROVIDER_OCTEN,
     PROVIDER_OXYLABS,
     PROVIDER_PARALLEL,
     PROVIDER_PARALLEL_MCP,
@@ -84,6 +85,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
     PROVIDER_SELTZ: ("web_router.providers.seltz", "SeltzProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
+    PROVIDER_OCTEN: ("web_router.providers.octen", "OctenProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
     PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
@@ -237,15 +239,13 @@ def _is_set(env_var: str) -> bool:
 def configured_providers() -> list[str]:
     """Every builtin search provider you currently have a credential for, plus the keyless ones.
 
-    Reports what the environment makes usable, which
-    :func:`available_providers` deliberately does not: that lists every name
-    the router knows, key or no key.
+    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
+    lists every name the router knows, key or no key.
 
-    This reads environment variables only. A key passed as ``provider_config``
-    is invisible here, and a key that is present may still be rejected by the
-    service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside
-    its credential -- a LiteLLM proxy's URL -- is reported only when it has both.
+    This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
+    present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
+    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
+    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
     """
     return sorted(
         name

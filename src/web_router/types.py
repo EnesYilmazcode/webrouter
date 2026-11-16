@@ -82,6 +82,7 @@ class Provider(str, Enum):
     LINKUP = "linkup"
     SELTZ = "seltz"
     WEBIQ = "webiq"
+    OCTEN = "octen"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     VALYU = "valyu"
@@ -125,8 +126,7 @@ class NormalizedRequest(BaseModel):
     :class:`ExtractRequest` -- and they share only this: a set of optional
     parameters a provider may or may not map, and an untranslated passthrough.
     :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads
-    :meth:`specified_parameters` to reject a request carrying options the chosen
-    backend does not map.
+    :meth:`specified_parameters` to reject a request carrying options the chosen backend does not map.
     """
 
     model_config = ConfigDict(extra="forbid")

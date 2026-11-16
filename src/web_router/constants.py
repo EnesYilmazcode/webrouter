@@ -72,6 +72,7 @@ PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
+PROVIDER_OCTEN = Provider.OCTEN.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
@@ -114,16 +115,15 @@ MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
 
-``auto`` needs no credential, so an unconfigured router still searches instead
-of raising about a key the caller never mentioned. Naming a provider explicitly
-keeps the old behaviour: a missing key for *that* provider is still an error.
+``auto`` needs no credential, so an unconfigured router still searches instead of raising about a key the caller
+never mentioned. Naming a provider explicitly keeps the old behaviour: a missing key for *that* provider is still
+an error.
 """
 
 # --- Install extras ---------------------------------------------------------
 
-# Extras are named after the methods you call, not the backends behind them, so
-# a provider maps to the extra that installs it rather than owning one of its
-# own. See the comment over [project.optional-dependencies] in pyproject.toml.
+# Extras are named after the methods you call, not the backends behind them, so a provider maps to the extra that
+# installs it rather than owning one of its own. See the comment over [project.optional-dependencies] in pyproject.toml.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
@@ -135,18 +135,16 @@ EXTRA_ALL = "all"
 EXTRA_MCP = "mcp"
 """The one extra that is not named after a method.
 
-``search``, ``extract`` and ``research`` install backends for a method you
-call. ``mcp`` installs a way to *reach* those methods from somewhere else, so
-it names a transport instead -- the deliberate exception to the rule the
+``search``, ``extract`` and ``research`` install backends for a method you call. ``mcp`` installs a way to *reach*
+those methods from somewhere else, so it names a transport instead -- the deliberate exception to the rule the
 comment over [project.optional-dependencies] states.
 """
 
 EXTRA_AWS = "aws"
 """botocore, for the backends reached through an AWS account -- ``agentcore`` so far.
 
-The second exception to the method rule: botocore is a large install that
-signs requests for one cloud, and a ``search`` install that never touches AWS
-should not carry it. ``all`` includes it.
+The second exception to the method rule: botocore is a large install that signs requests for one cloud, and a
+``search`` install that never touches AWS should not carry it. ``all`` includes it.
 """
 
 # --- Credentials ------------------------------------------------------------
@@ -162,6 +160,7 @@ ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
+ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_VALYU_API_KEY = "VALYU_API_KEY"
@@ -191,6 +190,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
     PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
+    PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
@@ -561,10 +561,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu`` and ``seltz`` joined
-after the scan that set the order, and the ranking set has no rows for them. A backend that joins later goes at the
-end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it ahead of the
-keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz`` and
+``octen`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves
+it ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (

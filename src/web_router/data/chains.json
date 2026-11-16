@@ -33,7 +33,8 @@
       "tavily-litellm",
       "parallel-litellm",
       "valyu",
-      "seltz"
+      "seltz",
+      "octen"
     ],
     "unmeasured": [
       "keenable",
@@ -43,7 +44,8 @@
       "tavily-litellm",
       "parallel-litellm",
       "valyu",
-      "seltz"
+      "seltz",
+      "octen"
     ],
     "too_few_questions": [],
     "no_row_served": [],

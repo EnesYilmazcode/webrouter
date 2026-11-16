@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2706 endpoints.
+372 vendors, 2705 endpoints.
 
 ### advertising
 
@@ -275,7 +275,7 @@ Web, news and archive search.
 | [Library of Congress loc.gov API](https://www.loc.gov/apis/json-and-yaml/) `loc-gov` | Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API. | 6 read | none | none | docs 2026-11-09 |
 | [NewsAPI.org](https://newsapi.org/docs) `newsapi` | Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources. | 3 read | key in header | `NEWSAPI_API_KEY` | docs 2026-11-09 |
 | [NewsData.io](https://newsdata.io/documentation) `newsdata` | Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts. | 6 read | key in header | `NEWSDATA_API_KEY` | docs 2026-11-09 |
-| [Octen](https://docs.octen.ai/) `octen` | Real-time web, news and broad search plus URL content extraction from Octen. | 4 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
+| [Octen](https://docs.octen.ai/) `octen` | Real-time news and broad search plus URL content extraction from Octen; web search is served by search(). | 3 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
 | [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
