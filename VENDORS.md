@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-382 vendors, 2766 endpoints.
+385 vendors, 2798 endpoints.
 
 ### advertising
 
@@ -166,6 +166,7 @@ Companies, funding, jobs, technographics and business registries.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Adzuna](https://developer.adzuna.com/overview) `adzuna` | Job ads aggregated across 19 countries, with salary statistics: search listings, salary histograms and history, vacancies by region and the top hiring companies. | 6 read | key in query | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | docs 2026-11-16 |
 | [akta.pro](https://docs.akta.pro) `akta` | Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro. | 10 read | key in header | `AKTA_API_KEY` | docs 2026-11-08 |
 | [Ashby Job Board](https://developers.ashbyhq.com/docs/public-job-posting-api) `ashby` | A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation. | 1 read | none | none | docs 2026-11-09 |
 | [Aviato](https://docs.data.aviato.co) `aviato` | Company, funding, investor and people data, contact info and search through the Aviato data engine. | 33 read | key in header | `AVIATO_API_KEY` | docs 2026-11-08 |
@@ -192,7 +193,9 @@ Companies, funding, jobs, technographics and business registries.
 | [Ocean.io](https://app.ocean.io/docs) `oceanio` | Lookalike company and people search, company and person enrichment and bulk lookups. | 15 read | key in header | `OCEAN_API_TOKEN` | docs 2026-11-08 |
 | [OpenFunnel](https://docs.openfunnel.dev) `openfunnel` | Find lookalike companies from seeds or a description, companies by the tech in their job posts, and qualify one company against criteria. | 8 read | key in header | `OPENFUNNEL_API_KEY` | docs 2026-11-09 |
 | [Openmart](https://app.openmart.com/api-docs) `openmart` | A local business database: search businesses and brands, with company enrichment from a website. | 5 read | key in header | `OPENMART_API_KEY` | docs 2026-11-08 |
+| [OpenRegister](https://docs.openregister.de/introduction) `openregister` | German company data from the Handelsregister, Bundesanzeiger, Transparenzregister and insolvency notices: company search, register details, owners, UBOs, holdings, financials, contacts, people and insolvency proceedings. | 16 read | key in header | `OPENREGISTER_API_KEY` | docs 2026-11-16 |
 | [Origami](https://docs.origami.chat/v3/overview) `origami` | Lead lists an AI agent researched from a plain-English brief: read the lists and their rows. | 7 read | key in header | `ORIGAMI_API_KEY` | docs 2026-11-09 |
+| [Pappers](https://www.pappers.fr/api/documentation) `pappers` | French company data by SIREN/SIRET: full company records with directors, beneficial owners, finances and BODACC notices, search of companies, directors and notices, annual accounts, relationship maps and PEP/sanctions checks. | 10 read | key in header | `PAPPERS_API_KEY` | docs 2026-11-16 |
 | [PredictLeads](https://docs.predictleads.com/v3/api_endpoints) `predictleads` | Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies. | 26 read | key in header | `PREDICTLEADS_API_KEY`, `PREDICTLEADS_API_TOKEN` | docs 2026-11-08 |
 | [Recent Funding](https://recentfunding.com/docs/) `recentfunding` | Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds. | 10 read | key in header | `RECENTFUNDING_API_KEY` | docs 2026-11-09 |
 | [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr/docs/) `recherche-entreprises` | Search French companies, associations and public bodies (SIREN/SIRET) by name, address, directors, location and many labels, from the open Annuaire des Entreprises. | 2 read | none | none | docs 2026-11-09 |
