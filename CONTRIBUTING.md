@@ -329,9 +329,14 @@ tag (`gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z`): it builds the sd
 approves the `pypi` environment, publishes them to
 [PyPI](https://pypi.org/project/webrouter/) through trusted publishing, so no
 upload token exists. It refuses a tag that is not on `main`, does not match
-`__version__`, or is not above every version already on PyPI. Once PyPI has
-it, `mcp-publisher publish` lists that version in the
-[MCP Registry](https://registry.modelcontextprotocol.io).
+`__version__` or `server.json`, or is not above every version already on PyPI.
+Once PyPI has it, the [MCP Registry](.github/workflows/mcp-registry.yml) job
+lists that version in the [MCP Registry](https://registry.modelcontextprotocol.io),
+signed in with the run's OIDC token. If only that job fails, use "Re-run failed
+jobs" (re-running all jobs stops at the PyPI version check), or run the workflow
+on the tag (`gh workflow run mcp-registry.yml --ref vX.Y.Z -f tag=vX.Y.Z`). The
+hand run needs a tag that already has `mcp-registry.yml`, so tags cut before it
+existed can't be listed this way.
 
 ## AI coding agents
 
