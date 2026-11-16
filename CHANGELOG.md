@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Vendor catalog: Societe.com API Pro, Brønnøysund Register Centre (Enhetsregisteret), Harmonic, Finnish Patent and Registration Office (PRH) open data, Wappalyzer and Albacross, with 44 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 395 vendors and 2,882 endpoints.
 - Vendor catalog: Explorium AgentSource, OpenCorporates, HG Insights and handelsregister.ai, with 40 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 389 vendors and 2,838 endpoints.
 - Vendor catalog: Adzuna, Pappers and OpenRegister, with 32 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 385 vendors and 2,798 endpoints.
 - Vendor catalog: Geoapify, TomTom, HERE, Yelp Fusion and ipdata, with 27 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 382 vendors and 2,766 endpoints.
