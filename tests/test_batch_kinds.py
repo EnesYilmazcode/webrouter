@@ -141,9 +141,9 @@ def test_a_gone_page_echoed_without_its_fragment_is_still_gone() -> None:
     from web_router.providers._error_pages import split_error_pages
     from web_router.types import ExtractedDocument
 
-    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=A + "#top")
+    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=[A + "#top"])
     assert failures[0].kind == "target"
-    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked="https://A.TEST/")
+    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=["https://A.TEST/"])
     assert failures[0].kind == "target"
 
 

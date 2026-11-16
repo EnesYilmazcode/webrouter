@@ -30,14 +30,12 @@ def asked_for(url: str, urls: Sequence[str]) -> set[str]:
 def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[str] = ()) -> list[str | None]:
     """The requested URL each of ``answered`` is for, or ``None`` where it cannot be told.
 
-    One requested URL owns whatever came back. Otherwise a URL is matched as
-    :func:`asked_for` reads it, and when exactly one answer matches nothing and
-    exactly one requested URL is unclaimed -- by the answers or by
-    ``also_claimed``, the URLs the backend reported failed -- that redirect is
-    the unclaimed URL's.
+    A URL is matched as :func:`asked_for` reads it, and when exactly one
+    answer matches nothing and exactly one requested URL is unclaimed -- by
+    the answers or by ``also_claimed``, the URLs the backend reported failed --
+    that redirect is the unclaimed URL's. So one requested URL owns its own
+    page, or the one redirect it led to, never a second unrelated page.
     """
-    if len(urls) == 1:
-        return [urls[0]] * len(answered)
     matched = [next(iter(found)) if (found := asked_for(url, urls)) else None for url in answered]
     claimed = {owner for owner in matched if owner} | {o for url in also_claimed for o in asked_for(url, urls)}
     unclaimed = [url for url in urls if url not in claimed]

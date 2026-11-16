@@ -28,7 +28,7 @@ from web_router.constants_extract import (
     MSG_EXTRACT_LOGIN_WALL,
     MSG_EXTRACT_NEAR_EMPTY,
 )
-from web_router.providers._url_match import bare_url, owners
+from web_router.providers._url_match import asked_for, bare_url, owners
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
 
@@ -50,7 +50,7 @@ def _failure(document: ExtractedDocument, reason: str, asked: str | None = None)
 
 
 def split_error_pages(
-    documents: Iterable[ExtractedDocument], asked: str | Sequence[str] | None = None, reported: Iterable[str] = ()
+    documents: Iterable[ExtractedDocument], asked: Sequence[str] = (), reported: Iterable[str] = ()
 ) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
     """The documents worth returning, and each page that is not the one asked for as a failure saying why.
 
@@ -59,24 +59,41 @@ def split_error_pages(
     near-empty page is kept, with :data:`MSG_EXTRACT_NEAR_EMPTY` in its
     ``warnings``, since some real answers are that short.
 
-    ``asked`` is the URL, or the batch of URLs, the call carried: a failure is
-    named by the one it answers rather than by where a redirect landed, so the
-    caller sees the address they asked for and ``auto`` retries that address.
-    In a batch that is told as :func:`~._url_match.owners` tells it, with
-    ``reported`` the URLs the backend itself reported failed.
+    ``asked`` is the batch of URLs the call carried: a failure is named by the
+    one it answers rather than by where a redirect landed, so the caller sees
+    the address they asked for and ``auto`` retries that address. That is told
+    as :func:`~._url_match.owners` tells it, with ``reported`` the URLs the
+    backend itself reported failed; error pages no URL can be told for fail the
+    requested URLs nothing answered (:func:`_unanswered`).
     """
-    pages = list(documents)
-    urls = [asked] if isinstance(asked, str) else list(asked or ())
-    named = owners([page.url for page in pages], urls, reported) if urls else [None] * len(pages)
-    kept: list[ExtractedDocument] = []
+    pages, claimed = list(documents), list(reported)
+    named = owners([page.url for page in pages], asked, claimed) if asked else [None] * len(pages)
+    kept: list[tuple[ExtractedDocument, str | None]] = []
     failed: list[ExtractFailure] = []
+    strays: list[ExtractFailure] = []
     for document, owner in zip(pages, named, strict=True):
         reason = not_the_page(document)
-        if reason is not None:
-            failed.append(_failure(document, reason, owner))
+        if reason is None:
+            kept.append((_warned(document), owner))
         else:
-            kept.append(_warned(document))
-    return kept, failed
+            (failed if owner else strays).append(_failure(document, reason, owner))
+    if strays and asked and all(owner for _, owner in kept):
+        strays = _unanswered(strays, asked, {o for o in named if o} | {o for u in claimed for o in asked_for(u, asked)})
+    return [document for document, _ in kept], [*failed, *strays]
+
+
+def _unanswered(strays: list[ExtractFailure], asked: Sequence[str], claimed: set[str]) -> list[ExtractFailure]:
+    """Error pages no requested URL can be told for, as a failure of each requested URL nothing answered.
+
+    Two URLs redirected to two sign-in walls cannot be told apart, but both
+    were met, so each fails with the reasons and ``auto`` retries the URLs
+    asked for rather than the walls. With every URL answered they keep their own.
+    """
+    unanswered = [url for url in asked if url not in claimed]
+    if not unanswered:
+        return strays
+    reason = "; ".join(dict.fromkeys(stray.error for stray in strays))
+    return [ExtractFailure(url=url, error=reason, kind=ERROR_KIND_UPSTREAM) for url in unanswered]
 
 
 def named_failures(response: ExtractResponse, asked: Sequence[str]) -> ExtractResponse:
