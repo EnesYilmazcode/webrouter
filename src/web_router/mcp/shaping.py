@@ -222,11 +222,11 @@ def _cut_answer(text: str | None, budget: int) -> str | None:
     return truncate(text, int(budget * MCP_ANSWER_SHARE)) if text else text
 
 
-def _citation_rows(citations: list[Citation]) -> list[dict[str, Any]]:
-    """The citations a research run carries, as the rows a cut trims the snippets of."""
+def _citation_rows(citations: list[Citation], *, key: str = "field", snippets: bool = True) -> list[dict[str, Any]]:
+    """Citations as the rows a cut trims the snippets of: ``field`` under ``key``, a snippet only if ``snippets``."""
     return [
-        compact({"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet})
-        for citation in citations
+        compact({"url": cite.url, "title": cite.title, key: cite.field, "snippet": cite.snippet if snippets else None})
+        for cite in citations
     ]
 
 

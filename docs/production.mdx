@@ -77,6 +77,8 @@ Close a router when you are done with it, so its connections, and any browser
 sessions it opened, are released. Use it as a context manager:
 
 ```python
+from web_router import AsyncWebRouter, WebRouter
+
 with WebRouter() as router:
     router.search("...")
 

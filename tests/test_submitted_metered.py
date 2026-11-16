@@ -10,7 +10,7 @@ import pytest
 
 from tests.candidates_helpers import clear_keys, set_keys
 from tests.providers._nimble_research_stub import research_run, stub_client
-from web_router import WebRouter
+from web_router import ProviderError, WebRouter
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
@@ -45,3 +45,17 @@ def test_a_polled_answer_carries_its_time_too(wr: WebRouter) -> None:
     job = wr.submit_research("q", provider="nimble", effort="low")
     assert job.status().response is not None and job.status().response.elapsed_s is not None
     assert job.progress.response is not None and job.progress.response.elapsed_s == job.result().elapsed_s
+
+
+def test_a_throttled_job_start_starts_the_backends_cooldown(wr: WebRouter, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A named backend's 429 on starting a job cools it for later ``auto`` calls, as a 429 on a call does."""
+    throttled = ProviderError("nimble", "HTTP 429")
+    throttled.status_code = 429
+
+    def refused(request: object) -> None:
+        raise throttled
+
+    monkeypatch.setattr(wr._research_instances["nimble"], "submit", refused)
+    with pytest.raises(ProviderError):
+        wr.submit_research("q", provider="nimble")
+    assert wr._runtime is not None and wr._runtime.cooldowns.remaining("nimble") is not None

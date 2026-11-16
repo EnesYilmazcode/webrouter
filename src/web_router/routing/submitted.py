@@ -14,6 +14,8 @@ from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel
 
+from web_router.providers._cooldown import noting
+from web_router.providers._runtime import lent
 from web_router.providers.base import Job
 from web_router.routing.budget import BudgetedCall, budget_scope
 from web_router.routing.contract import ToolName
@@ -42,13 +44,16 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     A job's start is what bills, so inside ``wr.budget(...)`` each attempt to
     start one is reserved like any other, and research with no effort set runs
     at the one the budget maps, as ``research()`` does; with no shared budget
-    it starts as it would without one. The job's ``decision`` carries the
-    effort and, under a budget, what it charged the start, as ``research()``'s does. Its answer is
-    metered and written to the router's spend log once, when it is first seen, as a call's is.
+    it starts as it would without one. A named backend's 429 or 402 starts its
+    cooldown on ``router``, as a routed call's does. The job's ``decision``
+    carries the effort and, under a budget, what it charged the start, as
+    ``research()``'s does. Its answer is metered and written to the router's
+    spend log once, when it is first seen, as a call's is.
     """
     started = monotonic()
     request, record = unrouted(backend, request, limited(None, router))  # before the scope, which admits a named one
-    with budget_scope(None, tool, backend, request, router) as scope:
+    runtime = getattr(router, "_runtime", None)
+    with lent(runtime), budget_scope(None, tool, backend, request, router) as scope, noting(runtime, backend):
         job = backend.submit(request)
         job.decision = _charged(scope, record, job.provider)
     job.meter(partial(_answered, job=job, tool=tool, request=request, started=started, router=router))
@@ -59,7 +64,8 @@ async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: Normali
     """As :func:`submitted`, awaited."""
     started = monotonic()
     request, record = unrouted(backend, request, limited(None, router))
-    with budget_scope(None, tool, backend, request, router) as scope:
+    runtime = getattr(router, "_runtime", None)
+    with lent(runtime), budget_scope(None, tool, backend, request, router) as scope, noting(runtime, backend):
         job = await backend.asubmit(request)
         job.decision = _charged(scope, record, job.provider)
     job.meter(partial(_answered, job=job, tool=tool, request=request, started=started, router=router))

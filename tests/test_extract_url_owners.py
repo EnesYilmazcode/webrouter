@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import pytest
+
+from web_router.providers import _auto_extract_chain as chain
 from web_router.providers._auto_extract_chain import _merged
 from web_router.providers._error_pages import named_failures, split_error_pages
 from web_router.providers._url_match import owners
-from web_router.routing.metered import combined_cost
+from web_router.routing.metered import combined_cost, metered
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractRequest, ExtractResponse
 
 A, B, C = "https://a.test/p", "https://b.test/q", "https://c.test/r"
@@ -92,4 +97,38 @@ def test_a_combined_cost_is_estimated_unless_every_part_reported_and_unknown_if_
     estimated = ExtractResponse(provider="two", cost_usd=0.001, cost_source="estimated")
 
     assert combined_cost("extract", [(reported, request), (estimated, request)])["cost_source"] == "estimated"
-    assert combined_cost("extract", [(reported, request), (ExtractResponse(provider="unpriced"), request)]) == {}
+    unknown = combined_cost("extract", [(reported, request), (ExtractResponse(provider="unpriced"), request)])
+    assert unknown == {"cost_usd": None, "cost_source": None}
+
+
+def test_a_merged_answer_with_an_unpriced_retry_is_not_estimated_as_the_first_backends_alone() -> None:
+    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="down")], cost_usd=0.002)
+    second = ExtractResponse(provider="unpriced", documents=[ExtractedDocument(url=A, content=TEXT)])
+
+    merged = metered(_merged(first, second, [A], ExtractRequest(urls=[A])), "extract", ExtractRequest(urls=[A]), 0.0)
+
+    assert merged.cost_usd is None and merged.cost_source is None
+
+
+def test_a_retry_costs_only_the_urls_it_was_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    first = ExtractResponse(
+        provider="one",
+        documents=[],
+        failures=[ExtractFailure(url=A, error="gone", kind="target"), ExtractFailure(url=B, error="down")],
+        cost_usd=0.002,
+        cost_source="reported",
+    )
+    second = ExtractResponse(
+        provider="two", documents=[ExtractedDocument(url=B, content=TEXT)], cost_usd=0.001, cost_source="reported"
+    )
+    sent: list[list[str]] = []
+
+    def recorded(tool: Any, parts: Any) -> dict[str, Any]:
+        sent.append(list(parts[1][1].urls))
+        return combined_cost(tool, parts)
+
+    monkeypatch.setattr(chain, "combined_cost", recorded)
+    merged = _merged(first, second, [A, B], ExtractRequest(urls=[A, B]))
+
+    assert sent == [[B]], "the 404 on A never went on the retry, so the retry is not charged for it"
+    assert [failure.url for failure in merged.failures] == [A]

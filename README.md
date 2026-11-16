@@ -90,12 +90,13 @@ names every variable and where to get it, and fill in the ones you hold.
 | [`call_vendor`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
 
 ```python
-router.answer("who won the 2022 world cup final")  # .answer, .citations
-router.research("how did nvidia's datacenter mix shift in 2025", output_schema=MySchema)
-router.live_data("amazon_products", {"url": product_url}, provider="brightdata")
+with WebRouter() as router:
+    router.answer("who won the 2022 world cup final")  # .answer, .citations
+    router.research("how did nvidia's datacenter mix shift in 2025", output_schema=MySchema)
+    router.live_data("amazon_products", {"url": product_url}, provider="brightdata")
 
-with router.open_browser() as browser:  # a local Chromium, no key
-    browser.goto("https://example.com")
+    with router.open_browser() as browser:  # a local Chromium, no key
+        browser.goto("https://example.com")
 ```
 
 Every method has an async twin on `AsyncWebRouter`.

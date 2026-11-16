@@ -154,7 +154,7 @@ def _merged(
     one was not read, and one no sent URL can be told for is left out rather than returned beside that URL's
     failure. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
     """
-    sent = [failure.url for failure in first.failures]  # only these went on the retry
+    sent = _failed_urls(first)  # only these went on the retry: not a 404 or other page-own failure
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
     named = owners([document.url for document in retried.documents], sent, [f.url for f in retried.failures])
     pages = list(zip(retried.documents, named, strict=True))

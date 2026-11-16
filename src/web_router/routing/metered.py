@@ -35,7 +35,8 @@ _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 def metered(response: _ResponseT, tool: ToolName, request: NormalizedRequest, started: float) -> _ResponseT:
     """``response`` with the seconds since ``started`` (a :func:`time.monotonic` reading) and its cost."""
     update: dict[str, Any] = {"elapsed_s": time.monotonic() - started}
-    if getattr(response, "cost_usd", None) is None:
+    # A cost set to None on purpose (:func:`combined_cost` with a part unpriced) is unknown, not one to estimate.
+    if getattr(response, "cost_usd", None) is None and "cost_usd" not in response.model_fields_set:
         cost = estimated_cost(tool, getattr(response, "provider", None), request)
         if cost is not None:
             update.update(cost_usd=cost, cost_source=COST_ESTIMATED)
@@ -53,8 +54,10 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
     """The cost fields of one answer several backends' calls made together: each call's cost, summed.
 
     A part's cost is its own ``cost_usd`` when set, else the estimate for its
-    backend and request. ``reported`` only when every part reported its own;
-    nothing when any part's cost is unknown, which :func:`metered` then fills.
+    backend and request. ``reported`` only when every part reported its own.
+    When any part's cost is unknown so is the sum: both fields are set to
+    ``None``, which :func:`metered` leaves as they are rather than estimating
+    the first backend's share alone.
     """
     costs = [
         getattr(response, "cost_usd", None)
@@ -63,7 +66,7 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
         for response, request in parts
     ]
     if any(cost is None for cost in costs):
-        return {}
+        return {"cost_usd": None, "cost_source": None}
     reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response, _ in parts)
     return {
         "cost_usd": sum(cost for cost in costs if cost is not None),
