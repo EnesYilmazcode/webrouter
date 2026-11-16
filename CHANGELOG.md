@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Vendor catalog: Etherscan and Moralis, with 30 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 403 vendors and 2,972 endpoints.
 - Vendor catalog: Mixpanel, Close and Snitcher, with 28 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 401 vendors and 2,942 endpoints.
 - Vendor catalog: Pipedrive, Amplitude and Attio, with 32 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 398 vendors and 2,914 endpoints.
 - Vendor catalog: Societe.com API Pro, Brønnøysund Register Centre (Enhetsregisteret), Harmonic, Finnish Patent and Registration Office (PRH) open data, Wappalyzer and Albacross, with 44 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 395 vendors and 2,882 endpoints.

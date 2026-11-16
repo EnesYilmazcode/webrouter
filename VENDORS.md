@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-401 vendors, 2942 endpoints.
+403 vendors, 2972 endpoints.
 
 ### advertising
 
@@ -249,6 +249,7 @@ Markets, crypto, filings and economic statistics.
 | [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
 | [US Energy Information Administration](https://www.eia.gov/opendata/documentation.php) `eia` | US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2. | 8 read | key in query | `EIA_API_KEY` | docs 2026-11-09 |
 | [EODHD](https://eodhd.com/financial-apis/) `eodhd` | End-of-day and delayed prices, ticker search and fundamentals for stocks, ETFs, forex and crypto on global exchanges. | 4 read | key in query | `EODHD_API_TOKEN` | docs 2026-11-08 |
+| [Etherscan](https://docs.etherscan.io/) `etherscan` | EVM blockchain explorer data across 50+ chains with one key: balances, transactions, token and NFT transfers, token holders, contract source and ABI, event logs and gas prices. | 16 read | key in query | `ETHERSCAN_API_KEY` | docs 2026-11-16 |
 | [Ethplorer](https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API) `ethplorer` | Ethereum token and wallet data from Ethplorer: token info and prices, wallet balances, token transfers, transactions and top holders. | 8 read | key in query | `ETHPLORER_API_KEY` | docs 2026-11-09 |
 | [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access) `eurostat` | Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [FDIC BankFind Suite](https://api.fdic.gov/banks/docs) `fdic` | FDIC data on every US insured bank: institutions, branches, quarterly Call Report financials, failures since 1934, structure changes, deposits by branch and yearly industry totals. | 7 read | key in query | `FDIC_API_KEY` | docs 2026-11-09 |
@@ -262,6 +263,7 @@ Markets, crypto, filings and economic statistics.
 | [Kalshi](https://docs.kalshi.com/getting_started/quick_start_market_data) `kalshi` | Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks. | 8 read | none | none | docs 2026-11-09 |
 | [Marketstack](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0) `marketstack` | Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer). | 9 read | key in query | `MARKETSTACK_API_KEY` | docs 2026-11-08 |
 | [mempool.space](https://mempool.space/docs/api/rest) `mempool-space` | Bitcoin blockchain data from mempool.space's keyless REST API: addresses, transactions, blocks, mempool backlog, fee estimates and BTC prices. | 10 read | none | none | docs 2026-11-09 |
+| [Moralis](https://docs.moralis.com/) `moralis` | EVM blockchain data: wallet balances with prices, net worth, decoded history and PnL, token prices, metadata, holders and search, DEX candles, and NFT holdings and floor prices. | 14 read | key in header | `MORALIS_API_KEY` | docs 2026-11-16 |
 | [Nasdaq Data Link](https://data.nasdaq.com/tablesapi) `nasdaq-data-link` | Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata. | 2 read | key in query | `NASDAQ_DATA_LINK_API_KEY` | docs 2026-11-09 |
 | [Federal Reserve Bank of New York Markets Data](https://markets.newyorkfed.org/static/docs/markets-api.html) `newyorkfed` | US reference rates (SOFR, EFFR, OBFR, TGCR, BGCR), SOMA holdings, repo and reverse repo operations and primary dealer statistics from the New York Fed. | 10 read | none | none | docs 2026-11-09 |
 | [Polygon.io (Massive)](https://polygon.io/docs/rest/stocks/aggregates) `polygon` | US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive. | 10 read | key in query | `POLYGON_API_KEY` | docs 2026-11-08 |
