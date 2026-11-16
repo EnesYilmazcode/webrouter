@@ -158,14 +158,15 @@ def _merged(
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
     named = owners([document.url for document in retried.documents], sent, [f.url for f in retried.failures])
     pages = list(zip(retried.documents, named, strict=True))
-    read = [document for document, owner in pages if owner and document.content.strip()]
+    # Each read page sorts by the URL it answers, not where a redirect left it.
+    read = [(document, owner) for document, owner in pages if owner and document.content.strip()]
     blanks = [ExtractFailure(url=owner or d.url, error=blank) for d, owner in pages if not d.content.strip()]
     again = {
         asked: failure
         for failure in [*blanks, *retried.failures]
         for asked in asked_for(failure.url, sent) or {failure.url}
     }
-    found = {owner for document, owner in pages if owner and document.content.strip()}
+    found = {owner for _, owner in read}
     failures = [
         failure.model_copy(
             update={
@@ -182,7 +183,8 @@ def _merged(
     known = {failure.url for failure in first.failures}
     failures.extend(failure for failure in retried.failures if not (asked_for(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
-    documents = sorted([*first.documents, *read], key=lambda document: position.get(document.url, len(urls)))
+    placed = [*((document, document.url) for document in first.documents), *read]
+    documents = [document for document, url in sorted(placed, key=lambda pair: position.get(pair[1], len(urls)))]
     return first.model_copy(
         update={
             "documents": documents,

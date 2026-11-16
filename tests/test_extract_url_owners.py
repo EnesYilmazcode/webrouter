@@ -132,3 +132,16 @@ def test_a_retry_costs_only_the_urls_it_was_sent(monkeypatch: pytest.MonkeyPatch
 
     assert sent == [[B]], "the 404 on A never went on the retry, so the retry is not charged for it"
     assert [failure.url for failure in merged.failures] == [A]
+
+
+def test_a_retried_page_redirected_onto_a_later_url_still_comes_back_in_request_order() -> None:
+    first = ExtractResponse(
+        provider="one",
+        documents=[ExtractedDocument(url=B, content="B's own page, read the first time round.")],
+        failures=[ExtractFailure(url=A, error="down")],
+    )
+    second = ExtractResponse(provider="two", documents=[ExtractedDocument(url=B, content=TEXT)])
+
+    merged = _merged(first, second, [A, B], ExtractRequest(urls=[A, B]))
+
+    assert [document.content for document in merged.documents] == [TEXT, "B's own page, read the first time round."]

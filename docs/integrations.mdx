@@ -82,8 +82,9 @@ from anthropic import AsyncAnthropic
 from web_router import AsyncWebRouter
 from web_router.integrations.anthropic import WebRouterTools
 
+client = AsyncAnthropic()
 tools = WebRouterTools(AsyncWebRouter(), provider="nimble", max_results=5)
-agent = await AsyncAnthropic().beta.agents.create(
+agent = await client.beta.agents.create(
     name="researcher",
     model="claude-opus-5",
     system=tools.guide(),  # when to reach for which tool
