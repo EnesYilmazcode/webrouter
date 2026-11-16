@@ -35,9 +35,8 @@ _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 def metered(response: _ResponseT, tool: ToolName, request: NormalizedRequest, started: float) -> _ResponseT:
     """``response`` with the seconds since ``started`` (a :func:`time.monotonic` reading) and its cost."""
     update: dict[str, Any] = {"elapsed_s": time.monotonic() - started}
-    # A cost set to None on purpose (:func:`combined_cost` with a part unpriced) is unknown, not one to estimate.
-    if getattr(response, "cost_usd", None) is None and "cost_usd" not in response.model_fields_set:
-        cost = estimated_cost(tool, getattr(response, "provider", None), request)
+    if getattr(response, "cost_usd", None) is None:
+        cost = _part_cost(tool, response, request)
         if cost is not None:
             update.update(cost_usd=cost, cost_source=COST_ESTIMATED)
     return response.model_copy(update=update)
@@ -59,12 +58,7 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
     ``None``, which :func:`metered` leaves as they are rather than estimating
     the first backend's share alone.
     """
-    costs = [
-        getattr(response, "cost_usd", None)
-        if getattr(response, "cost_usd", None) is not None
-        else estimated_cost(tool, getattr(response, "provider", None), request)
-        for response, request in parts
-    ]
+    costs = [_part_cost(tool, response, request) for response, request in parts]
     if any(cost is None for cost in costs):
         return {"cost_usd": None, "cost_source": None}
     reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response, _ in parts)
@@ -72,3 +66,11 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
         "cost_usd": sum(cost for cost in costs if cost is not None),
         "cost_source": COST_REPORTED if reported else COST_ESTIMATED,
     }
+
+
+def _part_cost(tool: ToolName, response: BaseModel, request: NormalizedRequest) -> float | None:
+    """``response``'s own cost, else its backend's estimate; ``None`` when a merge set it unknown on purpose."""
+    cost = getattr(response, "cost_usd", None)
+    if cost is not None or "cost_usd" in response.model_fields_set:  # a part unpriced in combined_cost
+        return cost
+    return estimated_cost(tool, getattr(response, "provider", None), request)

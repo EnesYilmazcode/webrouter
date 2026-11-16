@@ -145,3 +145,11 @@ def test_a_retried_page_redirected_onto_a_later_url_still_comes_back_in_request_
     merged = _merged(first, second, [A, B], ExtractRequest(urls=[A, B]))
 
     assert [document.content for document in merged.documents] == [TEXT, "B's own page, read the first time round."]
+
+
+def test_a_cost_left_unknown_by_one_merge_stays_unknown_through_the_next() -> None:
+    request = ExtractRequest(urls=[A])
+    unknown = ExtractResponse(provider="one", cost_usd=0.002).model_copy(update={"cost_usd": None})
+    priced = ExtractResponse(provider="three", cost_usd=0.001, cost_source="reported")
+
+    assert combined_cost("extract", [(unknown, request), (priced, request)])["cost_usd"] is None
