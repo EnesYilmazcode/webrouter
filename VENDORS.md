@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-406 vendors, 3005 endpoints.
+409 vendors, 3036 endpoints.
 
 ### advertising
 
@@ -231,6 +231,7 @@ Markets, crypto, filings and economic statistics.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Alchemy](https://www.alchemy.com/docs/data) `alchemy` | Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, NFT ownership and metadata, and current and historical token prices. | 11 read | key in header | `ALCHEMY_API_KEY` | docs 2026-11-16 |
 | [Alpha Vantage](https://www.alphavantage.co/documentation/) `alphavantage` | Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators. | 10 read | key in query | `ALPHAVANTAGE_API_KEY` | docs 2026-11-09 |
 | [Bank of Canada](https://www.bankofcanada.ca/valet/docs) `bankofcanada` | Bank of Canada Valet API: exchange rates, interest rates and other Bank of Canada statistical series, keyless. | 7 read | none | none | docs 2026-11-09 |
 | [Bank of England](https://www.bankofengland.co.uk/boeapps/database/help.asp) `bankofengland` | Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless. | 2 read | none | none | docs 2026-11-09 |
@@ -244,6 +245,7 @@ Markets, crypto, filings and economic statistics.
 | [CoinGecko](https://docs.coingecko.com/reference/introduction) `coingecko` | Crypto prices, market data, history, OHLC candles and trending coins from CoinGecko. | 11 read | key in header | `COINGECKO_DEMO_API_KEY`, `COINGECKO_PRO_API_KEY` | docs 2026-11-08 |
 | [CoinMarketCap](https://coinmarketcap.com/api/documentation/) `coinmarketcap` | Crypto listings, latest and historical quotes, OHLCV, coin metadata, global market metrics and the Fear and Greed index from CoinMarketCap. | 10 read | key in header | `CMC_PRO_API_KEY` | docs 2026-11-09 |
 | [Commodity Price API](https://commoditypriceapi.com/docs) `commoditypriceapi` | Latest, historical, intraday and time-series prices for metals, oil, agricultural and other commodities. | 8 read | key in header | `COMMODITYPRICEAPI_API_KEY` | docs 2026-11-09 |
+| [CryptoCompare](https://developers.coindesk.com/documentation/data-api/introduction) `cryptocompare` | Crypto market data from CryptoCompare, now CoinDesk Data: reference index and exchange prices, OHLCV history, asset profiles and rankings, and crypto news. | 10 read | key in query | `CRYPTOCOMPARE_API_KEY` | docs 2026-11-16 |
 | [DefiLlama](https://api-docs.defillama.com/) `defillama` | DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless. | 10 read | none | none | docs 2026-11-09 |
 | [European Central Bank](https://data.ecb.europa.eu/help/api/overview) `ecb` | ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
@@ -262,6 +264,7 @@ Markets, crypto, filings and economic statistics.
 | [Glassnode](https://docs.glassnode.com/basic-api/api) `glassnode` | On-chain and market metrics for crypto assets as time series: prices, market cap, MVRV, SOPR, active addresses, supply, exchange balances, futures open interest and funding. | 15 read | key in header | `GLASSNODE_API_KEY` | docs 2026-11-16 |
 | [GoldRush (formerly Covalent)](https://goldrush.dev/docs/) `goldrush` | Multichain wallet and token data from GoldRush, formerly Covalent: balances with prices, portfolio history, transactions, transfers, token holders, approvals, NFTs and historical token prices. | 13 read | key in header | `GOLDRUSH_API_KEY` | docs 2026-11-16 |
 | [Hyperliquid](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) `hyperliquid` | Market data (mid prices, order books, candles, funding) and public account state from the Hyperliquid exchange's keyless info endpoint. | 7 read | none | none | docs 2026-11-09 |
+| [Intrinio](https://docs.intrinio.com/documentation/api_v2/getting_started) `intrinio` | US equity data: end-of-day, intraday and realtime stock prices, company profiles and search, standardized financial statements, financial metrics history and company news. | 10 read | key in header | `INTRINIO_API_KEY` | docs 2026-11-16 |
 | [Kalshi](https://docs.kalshi.com/getting_started/quick_start_market_data) `kalshi` | Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks. | 8 read | none | none | docs 2026-11-09 |
 | [Marketstack](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0) `marketstack` | Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer). | 9 read | key in query | `MARKETSTACK_API_KEY` | docs 2026-11-08 |
 | [mempool.space](https://mempool.space/docs/api/rest) `mempool-space` | Bitcoin blockchain data from mempool.space's keyless REST API: addresses, transactions, blocks, mempool backlog, fee estimates and BTC prices. | 10 read | none | none | docs 2026-11-09 |

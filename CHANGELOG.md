@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Vendor catalog: Alchemy, Intrinio and CryptoCompare, with 31 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 409 vendors and 3,036 endpoints.
 - Vendor catalog: Glassnode, GoldRush (formerly Covalent) and OANDA, with 33 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 406 vendors and 3,005 endpoints.
 - Vendor catalog: Etherscan and Moralis, with 30 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 403 vendors and 2,972 endpoints.
 - Vendor catalog: Mixpanel, Close and Snitcher, with 28 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 401 vendors and 2,942 endpoints.
