@@ -151,8 +151,8 @@ def _merged(
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons.
 
     Each page ``retried`` returned is matched to the URL it was sent for (:func:`~._url_match.owners`); a blank
-    one was not read, and one no sent URL can be told for is left out rather than returned beside that URL's
-    failure. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
+    one was not read, and a page or failure no sent URL can be told for is left out: the caller never asked for
+    it, and a later member would fetch it. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
     """
     sent = _failed_urls(first)  # only these went on the retry: not a 404 or other page-own failure
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
@@ -180,8 +180,6 @@ def _merged(
         for failure in first.failures
         if failure.url in again or failure.url not in found
     ]
-    known = {failure.url for failure in first.failures}
-    failures.extend(failure for failure in retried.failures if not (asked_for(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
     placed = [*((document, document.url) for document in first.documents), *read]
     documents = [document for document, url in sorted(placed, key=lambda pair: position.get(pair[1], len(urls)))]

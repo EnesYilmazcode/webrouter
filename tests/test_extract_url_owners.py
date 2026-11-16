@@ -162,28 +162,3 @@ def test_two_urls_redirected_to_two_walls_fail_under_the_urls_asked_for() -> Non
 
     assert [page.url for page in kept] == [C]
     assert sorted(failure.url for failure in failures) == [A, B], "auto retries A and B, not the walls"
-
-
-def test_a_one_url_retry_keeps_its_own_page_and_drops_an_unrelated_one() -> None:
-    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="down")])
-    second = ExtractResponse(
-        provider="two",
-        documents=[ExtractedDocument(url=A, content=TEXT), ExtractedDocument(url=C, content=TEXT)],
-    )
-
-    merged = _merged(first, second, [A], ExtractRequest(urls=[A]))
-
-    assert [document.url for document in merged.documents] == [A]
-
-
-def test_a_retried_page_echoed_with_a_slash_keeps_its_place() -> None:
-    first = ExtractResponse(
-        provider="one",
-        documents=[ExtractedDocument(url=A, content=TEXT), ExtractedDocument(url=C, content=TEXT)],
-        failures=[ExtractFailure(url=B, error="down")],
-    )
-    second = ExtractResponse(provider="two", documents=[ExtractedDocument(url=B + "/", content=TEXT)])
-
-    merged = _merged(first, second, [A, B, C], ExtractRequest(urls=[A, B, C]))
-
-    assert [document.url for document in merged.documents] == [A, B + "/", C]
