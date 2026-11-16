@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-403 vendors, 2972 endpoints.
+406 vendors, 3005 endpoints.
 
 ### advertising
 
@@ -259,6 +259,8 @@ Markets, crypto, filings and economic statistics.
 | [Fiscal.ai](https://docs.fiscal.ai/) `fiscal-ai` | Public company financials from Fiscal.ai: as-reported and standardized statements, ratios, segments and KPIs, stock prices, filings, news and earnings call transcripts for companies in the US, Canada, UK and EU. | 10 read | key in header | `FISCAL_API_KEY` | docs 2026-11-09 |
 | [Financial Modeling Prep](https://site.financialmodelingprep.com/developer/docs) `fmp` | Stock quotes, end-of-day prices, company profiles, financial statements, key metrics, news, earnings calendar and Treasury rates from Financial Modeling Prep (FMP). | 10 read | key in header | `FMP_API_KEY` | docs 2026-11-09 |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/docs/api/fred/) `fred` | US and international economic time series from the Federal Reserve Bank of St. Louis: series search, metadata, observations, categories and release calendars. | 7 read | key in query | `FRED_API_KEY` | docs 2026-11-09 |
+| [Glassnode](https://docs.glassnode.com/basic-api/api) `glassnode` | On-chain and market metrics for crypto assets as time series: prices, market cap, MVRV, SOPR, active addresses, supply, exchange balances, futures open interest and funding. | 15 read | key in header | `GLASSNODE_API_KEY` | docs 2026-11-16 |
+| [GoldRush (formerly Covalent)](https://goldrush.dev/docs/) `goldrush` | Multichain wallet and token data from GoldRush, formerly Covalent: balances with prices, portfolio history, transactions, transfers, token holders, approvals, NFTs and historical token prices. | 13 read | key in header | `GOLDRUSH_API_KEY` | docs 2026-11-16 |
 | [Hyperliquid](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) `hyperliquid` | Market data (mid prices, order books, candles, funding) and public account state from the Hyperliquid exchange's keyless info endpoint. | 7 read | none | none | docs 2026-11-09 |
 | [Kalshi](https://docs.kalshi.com/getting_started/quick_start_market_data) `kalshi` | Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks. | 8 read | none | none | docs 2026-11-09 |
 | [Marketstack](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0) `marketstack` | Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer). | 9 read | key in query | `MARKETSTACK_API_KEY` | docs 2026-11-08 |
@@ -266,6 +268,7 @@ Markets, crypto, filings and economic statistics.
 | [Moralis](https://docs.moralis.com/) `moralis` | EVM blockchain data: wallet balances with prices, net worth, decoded history and PnL, token prices, metadata, holders and search, DEX candles, and NFT holdings and floor prices. | 14 read | key in header | `MORALIS_API_KEY` | docs 2026-11-16 |
 | [Nasdaq Data Link](https://data.nasdaq.com/tablesapi) `nasdaq-data-link` | Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata. | 2 read | key in query | `NASDAQ_DATA_LINK_API_KEY` | docs 2026-11-09 |
 | [Federal Reserve Bank of New York Markets Data](https://markets.newyorkfed.org/static/docs/markets-api.html) `newyorkfed` | US reference rates (SOFR, EFFR, OBFR, TGCR, BGCR), SOMA holdings, repo and reverse repo operations and primary dealer statistics from the New York Fed. | 10 read | none | none | docs 2026-11-09 |
+| [OANDA](https://developer.oanda.com/rest-live-v20/introduction/) `oanda` | Forex, metals and CFD prices from OANDA's v20 REST API: tradeable instruments, live bid/ask pricing and historical candles. | 5 read | key in header | `OANDA_API_KEY` | docs 2026-11-16 |
 | [Polygon.io (Massive)](https://polygon.io/docs/rest/stocks/aggregates) `polygon` | US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive. | 10 read | key in query | `POLYGON_API_KEY` | docs 2026-11-08 |
 | [Polymarket](https://docs.polymarket.com/) `polymarket` | Public prediction-market data from Polymarket: search, events and markets (Gamma API), order books, prices and price history (CLOB API), trades, holders and open interest (Data API). | 10 read | none | none | docs 2026-11-09 |
 | [SEC API (sec-api.io)](https://sec-api.io/docs) `sec-api` | SEC EDGAR filings as JSON from sec-api.io: filing search, full-text search, insider trades (Forms 3/4/5), 13F institutional holdings, XBRL-to-JSON financials, filing section extraction and ticker/CIK/CUSIP mapping. | 10 read | key in header | `SEC_API_KEY` | docs 2026-11-09 |
