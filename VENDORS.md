@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-395 vendors, 2882 endpoints.
+398 vendors, 2914 endpoints.
 
 ### advertising
 
@@ -43,11 +43,14 @@ Web and product analytics, tag management, CRM and marketing data.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Amplitude](https://amplitude.com/docs/apis/analytics/dashboard-rest) `amplitude` | Product analytics from an Amplitude project: saved chart results, event segmentation, funnels, retention, active users, revenue LTV and a user's event stream. | 11 read | HTTP Basic | `AMPLITUDE_API_KEY`, `AMPLITUDE_SECRET_KEY` | docs 2026-11-16 |
+| [Attio](https://docs.attio.com/rest-api/overview) `attio` | An Attio CRM workspace: people, companies, deals and custom objects, list entries (pipelines), notes, tasks and the workspace's schema. | 11 read | key in header | `ATTIO_API_KEY` | docs 2026-11-16 |
 | [Cloudflare](https://developers.cloudflare.com/api/) `cloudflare` | Zone traffic, firewall and security analytics through Cloudflare's GraphQL Analytics API, plus zones and DNS records from the v4 REST API. | 5 read | key in header | `CLOUDFLARE_API_TOKEN` | docs 2026-11-09 |
 | [Google Analytics 4 (Data API)](https://developers.google.com/analytics/devguides/reporting/data/v1) `google-analytics` | Reports from your Google Analytics 4 properties: users, sessions, events and conversions by any dimension, plus realtime and the dimension/metric catalog. | 3 read | OAuth refresh token | `GOOGLE_ANALYTICS_CLIENT_ID`, `GOOGLE_ANALYTICS_CLIENT_SECRET`, `GOOGLE_ANALYTICS_REFRESH_TOKEN` | docs 2026-11-08 |
 | [Google Tag Manager](https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2) `google-tag-manager` | Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables. | 7 read | OAuth refresh token | `GOOGLE_TAG_MANAGER_CLIENT_ID`, `GOOGLE_TAG_MANAGER_CLIENT_SECRET`, `GOOGLE_TAG_MANAGER_REFRESH_TOKEN` | docs 2026-11-08 |
 | [HubSpot](https://developers.hubspot.com/docs/api-reference/legacy/crm/understanding-the-crm) `hubspot` | HubSpot CRM records (contacts, companies, deals, tickets), CRM search, deal pipelines and stages, and owners through the CRM v3 API. | 6 read | key in header | `HUBSPOT_ACCESS_TOKEN` | docs 2026-11-09 |
 | [Klaviyo](https://developers.klaviyo.com/en/reference/api_overview) `klaviyo` | Email, SMS and push campaign and flow performance (opens, clicks, conversions, revenue), metrics and their aggregates from a Klaviyo account. | 6 read | key in header | `KLAVIYO_API_KEY` | docs 2026-11-09 |
+| [Pipedrive](https://developers.pipedrive.com/docs/api/v1) `pipedrive` | A Pipedrive CRM company account: deals, persons, organizations, activities, pipelines and stages, with search across them. | 10 read | key in header | `PIPEDRIVE_API_TOKEN` | docs 2026-11-16 |
 | [PostHog](https://posthog.com/docs/api) `posthog` | Product analytics from a PostHog project: SQL (HogQL) queries over events and persons, saved insights and dashboards, persons, events and feature flags. | 9 read | key in header | `POSTHOG_PERSONAL_API_KEY` | docs 2026-11-09 |
 | [Similarweb](https://developers.similarweb.com/docs/similarweb-web-traffic-api) `similarweb` | Estimated website traffic and engagement, marketing channel mix, referrals, country split, global rank, similar sites and search keywords for any domain. | 8 read | key in query | `SIMILARWEB_API_KEY` | docs 2026-11-09 |
 
