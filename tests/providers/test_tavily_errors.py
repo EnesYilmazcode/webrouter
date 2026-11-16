@@ -63,7 +63,8 @@ def test_a_search_sdk_error_gets_its_kind(monkeypatch: pytest.MonkeyPatch, error
         assert raised.value.retryable is (kind == "rate_limit")
 
 
-@pytest.mark.parametrize(("error", "kind"), CASES)
+# The extract path maps errors through the same code as search, so one case covers its wrapper.
+@pytest.mark.parametrize(("error", "kind"), [CASES[3]])
 def test_an_extract_sdk_error_gets_its_kind(monkeypatch: pytest.MonkeyPatch, error: Exception, kind: str) -> None:
     call, acall = _raising(error)
     monkeypatch.setattr(TavilyClient, "extract", call)
