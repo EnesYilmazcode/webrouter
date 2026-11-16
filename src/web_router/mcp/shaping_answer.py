@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from web_router.mcp.shaping import _citation_rows, _cut_answer, _fit, compact
+from web_router.mcp.shaping import _cut_answer, _fit, compact
 from web_router.mcp.shaping_cost import cost_fields
+from web_router.types import Citation
 from web_router.types_answer import AnswerResponse
 
 
@@ -33,7 +34,7 @@ def shape_answer(
         shown = sorted(response.citations, key=lambda citation: citation.field is None)
     else:
         shown = cited
-    rows = _citation_rows(shown, key="marker", snippets=snippets)
+    rows = [_row(citation, snippets=snippets) for citation in shown]
     payload = compact(
         {
             "provider": response.provider,
@@ -47,3 +48,8 @@ def shape_answer(
     )
     shortened = answer != response.answer
     return _fit(payload, rows, ("snippet",), handle=handle, budget=budget, shortened=shortened, main=False)
+
+
+def _row(citation: Citation, *, snippets: bool) -> dict[str, Any]:
+    row = {"url": citation.url, "title": citation.title, "marker": citation.field}
+    return compact({**row, "snippet": citation.snippet} if snippets else row)

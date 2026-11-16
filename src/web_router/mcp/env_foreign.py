@@ -41,9 +41,13 @@ def foreign_warning(paths: list[Path], pointer: Path) -> dict[str, str]:
     """The ``warning`` entry of the capabilities report: empty when no file is foreign."""
     if not paths:
         return {}
-    return {"warning": MCP_MSG_ENV_FOREIGN.format(paths=", ".join(map(str, paths)), pointer=pointer)}
+    return {"warning": MCP_MSG_ENV_FOREIGN.format(paths=_listed(paths), pointer=pointer)}
 
 
 def noted_instructions(instructions: str, paths: list[Path]) -> str:
     """``instructions`` with a warning added when ``paths`` holds a foreign file."""
-    return instructions + (MCP_MSG_INSTRUCTIONS_FOREIGN_ENV.format(paths=", ".join(map(str, paths))) if paths else "")
+    return instructions + (MCP_MSG_INSTRUCTIONS_FOREIGN_ENV.format(paths=_listed(paths)) if paths else "")
+
+
+def _listed(paths: list[Path]) -> str:
+    return ", ".join(map(str, paths))

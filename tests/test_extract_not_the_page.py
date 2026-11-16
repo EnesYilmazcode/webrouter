@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import httpx
 import pytest
 
 from web_router.constants_extract import (
@@ -113,9 +112,18 @@ def _jina_payload(**data: Any) -> dict[str, Any]:
     return {"code": 200, "status": 20000, "data": {"url": GONE, "title": "", "content": "", **data}}
 
 
-def _recorded_jina(payload: dict[str, Any]) -> JinaExtractProvider:
-    """Jina answering over HTTP with a recorded payload: the request is built and sent, only the network is stubbed."""
-    return JinaExtractProvider(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=payload)))
+class _RecordedJina(JinaExtractProvider):
+    """Jina's own mapping over a recorded payload, with no request sent."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        super().__init__()
+        self.payload = payload
+
+    def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        return self._to_response(request, urls, self.payload)
+
+    async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        return self._to_response(request, urls, self.payload)
 
 
 NOT_FOUND = _jina_payload(
@@ -128,7 +136,7 @@ NOT_FOUND = _jina_payload(
 
 def test_a_jina_404_with_text_raises_naming_the_status(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("JINA_API_KEY", raising=False)
-    provider = _recorded_jina(NOT_FOUND)
+    provider = _RecordedJina(NOT_FOUND)
     try:
         with pytest.raises(ProviderError, match="404"):
             provider.extract(ExtractRequest(urls=[GONE]))
@@ -138,7 +146,7 @@ def test_a_jina_404_with_text_raises_naming_the_status(monkeypatch: pytest.Monke
 
 async def test_a_jina_challenge_page_raises_from_the_async_call_too(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("JINA_API_KEY", raising=False)
-    provider = _recorded_jina(
+    provider = _RecordedJina(
         _jina_payload(title="Just a moment...", content="Verifying you are human.", httpStatus=200)
     )
     try:
@@ -151,7 +159,7 @@ async def test_a_jina_challenge_page_raises_from_the_async_call_too(monkeypatch:
 def test_jinas_warning_is_a_typed_warning(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("JINA_API_KEY", raising=False)
     payload = _jina_payload(content=ARTICLE, httpStatus=200, warning="This page maybe not yet fully loaded")
-    provider = _recorded_jina(payload)
+    provider = _RecordedJina(payload)
     try:
         document = provider.extract(ExtractRequest(urls=[GONE])).documents[0]
     finally:
