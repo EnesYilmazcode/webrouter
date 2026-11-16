@@ -40,11 +40,12 @@ from web_router.providers._chain import (
     _empty_answer,
     _held_or_raise,
     _keyed_chain,
-    _member_options,
     _members_and_chain,
     _quoted,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._hop import ahop, hop
+from web_router.providers._members import _Members
 from web_router.providers.answer import AnswerProvider
 from web_router.routing.attempts import admitted, failed, in_call_order, noted
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
@@ -93,7 +94,7 @@ class AutoAnswerProvider(AnswerProvider):
             answering = set(available_answer_providers())
             self._chain = tuple(member for member in self._chain if member[0] in answering)
         self.fallback_on_empty = fallback_on_empty
-        self._members: dict[int, AnswerProvider] = {}
+        self._members: _Members[AnswerProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -118,12 +119,7 @@ class AutoAnswerProvider(AnswerProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry_answer import create_answer_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_answer_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_answer_provider)
 
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
         failures: dict[str, WebRouterError] = {}
@@ -135,7 +131,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not admitted("answer", provider_name, request):
                 continue
             try:
-                response = self._member(position).answer(request)
+                response = hop("answer", provider_name, self._member(position).answer, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
             except UnsupportedParameterError as exc:
@@ -143,7 +139,7 @@ class AutoAnswerProvider(AnswerProvider):
                 noted("answer", provider_name, exc)
                 continue
             except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc)
+                failed(failures, "answer", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
@@ -160,7 +156,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not admitted("answer", provider_name, request):
                 continue
             try:
-                response = await self._member(position).aanswer(request)
+                response = await ahop("answer", provider_name, self._member(position).aanswer, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
             except UnsupportedParameterError as exc:
@@ -168,7 +164,7 @@ class AutoAnswerProvider(AnswerProvider):
                 noted("answer", provider_name, exc)
                 continue
             except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc)
+                failed(failures, "answer", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
