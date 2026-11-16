@@ -123,9 +123,10 @@ def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
     return route.before_attempt(Attempt(tool=tool, provider=provider, request=request))
 
 
-def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException) -> None:
+def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException, member: object = None) -> None:
     """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any.
 
+    ``member`` is the provider object that raised, when built: it says whether it held a credential to refuse.
     Raises ``exc`` itself when no other backend could do better: a ``local``
     failure (a closed event loop, a provider's own bug) would fail every
     member the same way, and a ``target`` one (a host that does not resolve,
@@ -134,14 +135,18 @@ def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseExc
     """
     failures[provider] = exc
     noted(tool, provider, exc)
-    warn_if_refused(provider, exc)
+    warn_if_refused(provider, exc, member)
     if getattr(exc, "kind", None) in CHAIN_STOPPING_KINDS:
         raise exc
 
 
-def warn_if_refused(provider: str, exc: BaseException) -> None:
-    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide."""
-    if getattr(exc, "kind", None) == ERROR_KIND_AUTH:
+def warn_if_refused(provider: str, exc: BaseException, member: object = None) -> None:
+    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide.
+
+    A ``member`` that sent no credential (a keyless tier, a keyless custom provider) refused no key of the
+    caller's: its 401 or 403 is left to the hop's INFO record.
+    """
+    if getattr(exc, "kind", None) == ERROR_KIND_AUTH and getattr(member, "holds_credential", True):
         logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
 
 

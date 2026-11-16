@@ -29,7 +29,7 @@ except WebRouterError as exc:
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers`; the other rows are unaffected |
 | `ProviderError` | The backend itself failed: HTTP error, SDK exception, bad credentials | Branch on `kind` (see below); the original error is on `original`, wrapped, not swallowed |
 | `AllProvidersFailedError` | A `ProviderError`: every backend `auto` tried failed | `failures` maps each backend to its own error; `kind` is theirs when they agree |
-| `InvalidParameterError` | An option is not a value the method takes: an empty query, `max_results=0`, an unknown `search_depth`, a negative `Budget` cap. Raised before any backend is called | Fix the value: `field` names the option and `allowed` its values. Also a `ValueError` |
+| `InvalidParameterError` | An option is not a value the method takes: an empty or whitespace-only query, `max_results=0`, an unknown `search_depth`, a negative `Budget` cap. Raised before any backend is called | Fix the value: `field` names the option and `allowed` its values. Also a `ValueError` |
 | `LiveDataJobError` | A `ProviderError`: a live data run the vendor runs as a job (Oxylabs) failed after it was submitted | The run may still have billed: `job_id` names the job to read later |
 | `NoAnswerProviderError` | A `ProviderNotFoundError`: `answer()` was called with no provider and none could be chosen, or `auto` had no backend to try | Set an answer backend's key, or name one; `configured` lists the ones with a key and `env_vars` the variables that would add one |
 | `VendorNotFoundError` | A vendor call or lookup named a vendor or endpoint the catalog does not hold | Use `vendors()` or `find_vendor_endpoints()` to inspect the catalog |
@@ -47,11 +47,12 @@ a missing extra. Catch `WebRouterError` unless you mean one specific case.
 
 Every `ProviderError` says what kind of failure it was, so code can decide what
 to do without reading the message. A failed URL in an extract (`ExtractFailure`)
-carries the same `kind` and `status_code`.
+carries the same `kind` and `status_code`. Over MCP, a failed tool call's text
+ends in the same facts, as ` (kind=target, retryable=false)`.
 
 | Field | Meaning |
 | --- | --- |
-| `kind` | `auth` (the key was refused: 401, 403), `rate_limit` (429, 402), `bad_request` (400, 422), `not_found` (404), `timeout`, `target` (the page is the problem: its host does not resolve, or its URL is not one), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
+| `kind` | `auth` (the key was refused: 401, 403, or Brave's 422 `SUBSCRIPTION_TOKEN_INVALID`), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (the backend's endpoint or resource is not there: 404), `timeout`, `target` (the page is the problem: its host does not resolve, its URL is not one, or the page itself came back 404 or 410), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
 | `status_code` | The backend's HTTP status, when it answered with one |
 | `retryable` | Whether trying again, on the same backend or another, may work: `rate_limit`, `timeout` and `upstream` |
 | `retry_after` | Seconds the backend asked you to wait (`Retry-After`), when it said |
@@ -74,4 +75,5 @@ except ProviderError as exc:
 trying it would only bill another call. It raises that error instead. A key
 that is refused (`auth`) moves on, and is logged at `WARNING` on the
 `web_router` logger, so a broken key is not hidden by the backend that
-answered after it.
+answered after it. A keyless backend's 401 or 403 refused no key of yours, so
+only its `INFO` hop record shows it.
