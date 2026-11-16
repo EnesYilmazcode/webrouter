@@ -8,6 +8,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Changed
+
+- The [Live data](https://docs.webrouter.net/live-data) page walks through finding, describing and running a source, with a note per backend and sections on keyword search, inputs, freshness, errors and cost, and the MCP tools. The providers page gains a live data column, the configuration page lists Apify and Bright Data's token for live data, and `LiveDataJobError` covers a Bright Data snapshot as well as an Oxylabs job.
+
 ### Fixed
 
 ## [0.13.0] - 2026-11-16
