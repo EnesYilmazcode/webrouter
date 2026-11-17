@@ -121,10 +121,11 @@ cools every mode of that backend.
 ## Benchmarks
 
 A provider scan's setup is the same id (`--providers
-tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spellings
-`tavily@deep` and `tavily:ultra-fast@deep` still parse; `tavily:ultra-fast`
-without `@` is no vendor mode, and `tavily:fast` is the `fast` depth, where an
-older scan meant Tavily's tier.
+tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spelling `tavily@deep`
+still runs. `tavily:ultra-fast@deep` parses, so an older scan's rows still
+read, but a search with it is refused: Tavily's tier and `deep` both set
+`search_depth`. `tavily:ultra-fast` without `@` is no vendor mode, and
+`tavily:fast` is the `fast` depth, where an older scan meant Tavily's tier.
 
 ## Not yet
 
