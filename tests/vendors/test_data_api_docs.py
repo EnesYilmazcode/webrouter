@@ -1,4 +1,4 @@
-"""The Data API catalog tab of the docs site: built from the shipped catalog into a copy, wired into docs.json."""
+"""The Web Catalog tab of the docs site: built from the shipped catalog into a copy, wired into docs.json."""
 
 from __future__ import annotations
 

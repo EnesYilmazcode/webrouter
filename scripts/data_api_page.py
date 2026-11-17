@@ -1,4 +1,4 @@
-"""One data API's page in the Data API catalog, rendered as MDX from its catalog entry.
+"""One data API's page in the Web Catalog, rendered as MDX from its catalog entry.
 
 The page is a header card, the setup, the vendor's notes, an index of its
 endpoints, and one block per endpoint whose inputs and outputs sit apart: an
@@ -137,7 +137,7 @@ def _header(vendor: Vendor, icon: str) -> list[str]:
         '<span className="wc-vendor-id">'
         f'<img className="wc-icon" src={_href(icon)} alt="" width="40" height="40" noZoom />'
         f'<a className="wc-category" href="/{PAGES_DIR}?category={vendor.category}">'
-        f"{_literal('Data API catalog · ' + category_label(vendor.category))}</a></span>",
+        f"{_literal('Web Catalog · ' + category_label(vendor.category))}</a></span>",
         _key_badge(vendor),
         "</div>",
         '<div className="wc-stats">',

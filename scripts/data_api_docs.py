@@ -1,9 +1,9 @@
-"""Build the Data API catalog tab of the docs site from the vendor catalog.
+"""Build the Web Catalog tab of the docs site from the vendor catalog.
 
 Each vendor's JSON file in ``src/web_router/data/vendors/`` is the only
 source: this script turns it into a page per data API (see
 :mod:`scripts.data_api_page`), the index the catalog page filters, and the
-"Data API catalog" tab's sidebar, one collapsed group per category. Nothing
+"Web Catalog" tab's sidebar, one collapsed group per category. Nothing
 generated is committed: the script copies ``docs/`` to an output folder and
 writes into the copy, which the ``docs-site`` workflow publishes on the branch
 the docs site deploys from.
@@ -33,7 +33,7 @@ OUT = ROOT / "build" / "docs-site" / "docs"
 
 INDEX_FILE = "snippets/data-apis-index.jsx"
 """The gallery's data, under docs/: a named export, since Mintlify snippets cannot import JSON."""
-TAB = "Data API catalog"
+TAB = "Web Catalog"
 """The docs.json tab the catalog lives in. Its first group's committed pages (the catalog page) stay first;
 one collapsed group per category follows them."""
 

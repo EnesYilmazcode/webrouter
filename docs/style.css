@@ -24,7 +24,7 @@ html.dark #sidebar {
 .nimble-mark-text{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .25s}
 .nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
 
-/* Data API catalog page (snippets/data-api-gallery.jsx): search, category filter, one row per data API */
+/* Web Catalog page (snippets/data-api-gallery.jsx): search, category filter, one row per data API */
 .dag{margin-top:1.25rem}
 .dag-controls{display:flex;gap:.6rem;flex-wrap:wrap}
 .dag-search{flex:1 1 18rem;min-width:0;padding:.6rem .85rem;border-radius:.6rem;border:1px solid rgba(32,44,38,.2);background:transparent;font:inherit;color:inherit}

@@ -1,6 +1,6 @@
 import { DATA_APIS } from "/snippets/data-apis-index.jsx";
 
-// The Data API catalog: a search box, a category filter and one row per data API.
+// The Web Catalog: a search box, a category filter and one row per data API.
 // Its data is generated from the vendor catalog by scripts/data_api_docs.py;
 // nothing about a data API is written here.
 export const DataApiGallery = () => {
@@ -38,7 +38,7 @@ export const DataApiGallery = () => {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by name, site or job: emails, youtube.com, weather"
-          aria-label="Search the data API catalog"
+          aria-label="Search the Web Catalog"
         />
         <select
           className="dag-filter"

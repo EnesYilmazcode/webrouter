@@ -101,10 +101,10 @@
         ]
       },
       {
-        "tab": "Data API catalog",
+        "tab": "Web Catalog",
         "groups": [
           {
-            "group": "Data API catalog",
+            "group": "Web Catalog",
             "pages": [
               "data-apis"
             ]
