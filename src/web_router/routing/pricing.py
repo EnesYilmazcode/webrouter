@@ -42,9 +42,9 @@ from web_router.constants_budget import (
 )
 from web_router.constants_modes import PART_SEP
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.modes import Slots, split_mode
+from web_router.modes import split_mode
 from web_router.prices_modes import declared, mode_price
-from web_router.providers._pinning import split_pin
+from web_router.providers._pinning import pinned_mode, split_pin
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
@@ -125,7 +125,7 @@ def priced_as(attempt: Attempt) -> tuple[str, str | None]:
         found = split_mode(provider, pinned.split(PART_SEP), declared(provider, attempt.tool))
     except InvalidParameterError:
         return provider, pinned  # a part the price list does not name: unpriced
-    return provider, Slots(found.tier, found.depth or mode, found.flags).mode  # as pinning sets ``mode``
+    return provider, pinned_mode(found, mode)
 
 
 def attempt_cost(attempt: Attempt) -> float | None:
