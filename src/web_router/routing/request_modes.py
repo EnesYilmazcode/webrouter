@@ -9,7 +9,7 @@ candidates go first, the lowest in their method's static order first, and the re
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 
 from web_router.routing.contract import Candidate, RouteRequest
@@ -20,6 +20,11 @@ def backends_only(req: RouteRequest) -> RouteRequest:
     if all(candidate.mode is None for candidate in req.candidates):
         return req
     return replace(req, candidates=tuple(c for c in req.candidates if c.mode is None))
+
+
+def runnable(candidates: Sequence[Candidate]) -> bool:
+    """Whether ``candidates`` hold a backend to run: a router shown only vendor modes could order nothing yet."""
+    return any(candidate.mode is None for candidate in candidates)
 
 
 def within(req: RouteRequest, limit: int) -> RouteRequest:

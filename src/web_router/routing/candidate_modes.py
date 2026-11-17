@@ -56,6 +56,6 @@ def _member(router: Any, tool: str, name: str) -> Any:
         if entry == name:
             try:
                 return auto._member(position)
-            except Exception:  # unbuilt: eligibility already named it, with why
+            except Exception:  # an earlier entry of this name that cannot be built: eligibility named it, with why
                 continue
     return None

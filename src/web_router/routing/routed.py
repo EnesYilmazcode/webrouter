@@ -42,6 +42,7 @@ from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.request_modes import runnable
 from web_router.routing.route_scope import logged_route
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_modes, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
@@ -62,7 +63,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
 
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = ALL_TOOLS
-    _route_modes: bool = False  # whether the router is shown a candidate per vendor mode
+    _route_modes: bool = False
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
@@ -83,8 +84,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
                 name, a ``route_tools`` -- the caller's, or the one the router declares -- naming something else,
-                a ``route_modes`` that is not a bool,
-                or an unknown ``url_policy``.
+                a ``route_modes`` that is not a bool, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
         # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
@@ -107,7 +107,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         if getattr(chain, "name", None) != PROVIDER_AUTO:
             return None  # a named backend: nothing to order
         found = build_candidates(Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes)
-        if not found.candidates:
+        if not runnable(found.candidates):
             return None
         prompt, urls = prompt_of(tool, request)
         req = RouteRequest(

@@ -29,7 +29,8 @@ def cheapest_first(req: RouteRequest) -> RouteDecision:
     """Each method's candidates by estimated cost, $0 first and unknown prices last; ties as offered."""
     by_tool: dict[ToolName, list[Candidate]] = defaultdict(list)
     for candidate in req.candidates:
-        by_tool[candidate.tool].append(candidate)
+        if candidate.mode is None:  # a backend runs at its default mode, so it is priced at it
+            by_tool[candidate.tool].append(candidate)
     providers = {
         tool: [candidate.provider for candidate in sorted(candidates, key=lambda c: cost_key(c.est_cost_usd))]
         for tool, candidates in by_tool.items()

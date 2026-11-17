@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from tests.candidates_helpers import Shown, clear_keys, ids, set_keys
-from web_router import Budget, RouteDecision, RouteRequest, WebRouter
+from web_router import Budget, Candidate, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._modes import offers
 from web_router.providers._pinning import pinned_request
@@ -20,10 +20,10 @@ from web_router.routing.attempts import Attempt
 from web_router.routing.candidates import build_candidates
 from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider_llm import LLMDecider
+from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.decider_systemone import SystemOneDecider
 from web_router.routing.params import map_effort
 from web_router.routing.pricing import attempt_cost, attempt_p90
-from web_router.routing.rules import RulesRouter
 from web_router.types import SearchRequest
 
 CHAIN = {"auto": {"chain": {"search": ["exa", "tavily"]}}}
@@ -69,13 +69,35 @@ def test_the_caller_wins_over_the_router_and_a_router_may_opt_in_itself(keys: An
     assert shown(Shown(route_modes=True), route_modes=False) == ["search:exa", "search:tavily"]
 
 
-@pytest.mark.parametrize("router", [RulesRouter, LLMDecider, SystemOneDecider])
-def test_the_built_in_routers_declare_backends_only(router: Any) -> None:
-    assert router.route_modes is False
+@pytest.mark.parametrize("router", ["rules", "cheapest_first"])
+def test_a_built_in_router_is_shown_backends_only_unless_the_caller_asks(keys: Any, router: str) -> None:
+    assert WebRouter(router=router)._route_modes is False
+    assert WebRouter(router=router, route_modes=True)._route_modes is True
 
 
-def test_cheapest_first_declares_backends_only() -> None:
-    assert getattr(cheapest_first, "route_modes") is False  # noqa: B009  (a function attribute)
+@pytest.mark.parametrize("decider", [LLMDecider, SystemOneDecider])
+def test_a_built_in_decider_attached_is_shown_backends_only(keys: Any, decider: type) -> None:
+    fake = type("Fake", (), {"route_modes": decider.route_modes, "decide": lambda self, question: None})()
+    assert WebRouter(router=DeciderRouter(fake))._route_modes is False
+
+
+def test_cheapest_first_ranks_backends_at_their_default_price_whatever_their_modes_cost(keys: Any) -> None:
+    cheap = Candidate(tool="search", provider="exa", mode="exa-instant", est_cost_usd=0.001)
+    backends = (Candidate(tool="search", provider="exa", est_cost_usd=0.02), cheap)
+    req = RouteRequest(
+        prompt="q",
+        candidates=(*backends, Candidate(tool="search", provider="tavily", est_cost_usd=0.01)),
+        deadline_s=1.0,
+    )
+    assert cheapest_first(req).providers == {"search": ["tavily", "exa"]}
+
+
+def test_a_router_shown_only_modes_is_not_asked(keys: Any) -> None:
+    router, cap = Shown(), Budget(max_cost_usd=0.015)  # Exa's default is over it, its instant mode is not
+    with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router, route_modes=True) as wr:
+        found = build_candidates(wr, SEARCH, budget=cap, modes=True)
+        wr.plan("q", tool="search", budget=cap)
+    assert ids(found) == ["search:exa:exa-instant"] and router.reqs == []
 
 
 @pytest.mark.parametrize("value", ["yes", 1, [True]])
