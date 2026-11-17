@@ -15,7 +15,7 @@ from typing import Any
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, MSG_DROPPED_REFUSES_MODE
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.providers._modes import SEARCH, offers, with_mode
+from web_router.providers._modes import SEARCH, offers
 from web_router.providers._pinning import pinned_request
 from web_router.types import NormalizedRequest, SearchRequest
 
@@ -42,7 +42,7 @@ def mode_requests(router: Any, tool: str, request: NormalizedRequest, name: str)
     for offered in offers(owner):
         try:
             moded = pinned_request(owner, request, offered)
-            payload = with_mode(owner._build_payload(moded), owner, moded)
+            payload = owner._build_payload(moded)  # the mode merged and its refusals held, as the call sends it
         except InvalidParameterError as exc:
             entries.append((offered, MSG_DROPPED_REFUSES_MODE.format(why=exc)))
             continue

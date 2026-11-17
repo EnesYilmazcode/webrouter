@@ -177,3 +177,11 @@ def test_a_query_a_backend_refuses_offers_its_candidate_without_modes(monkeypatc
         WebRouter(provider_config={"auto": {"chain": {"search": ["brave"]}}}), too_long, modes=True
     )
     assert ids(found) == ["search:brave"], "the call reports the query; building candidates does not raise"
+
+
+def test_a_tier_the_effort_asked_would_overwrite_is_dropped_as_pinning_it_refuses(keys: Any) -> None:
+    medium = {"search": SearchRequest(query="q", effort="medium")}  # Exa's effort writes its type, as a tier does
+    found = build_candidates(WebRouter(provider_config=CHAIN), medium, modes=True)
+    tiers = [f"search:exa:{tier}" for tier in get_provider_class("exa").tiers]
+    assert not set(tiers) & set(ids(found)) and all("effort='medium'" in found.dropped[cid] for cid in tiers)
+    assert "search:exa:exa-highlights" in ids(found), "a content writes no type: still offered"
