@@ -89,3 +89,10 @@ def test_under_a_cost_cap_the_routers_attempts_keep_their_order(monkeypatch: pyt
         assert plan.providers["search"][:3] == ("exa:exa-deep", "exa:exa-instant", "tavily")
         response = wr.run(plan, budget=Budget(max_cost_usd=1.0))
     assert (calls.exa, response.provider) == (["deep", "instant"], "exa")
+
+
+def test_with_only_mode_candidates_the_attempts_give_a_runnable_order() -> None:
+    modes = tuple(c for c in CANDIDATES if c.mode is not None)
+    req = RouteRequest(prompt="q", candidates=modes, deadline_s=1.0)
+    merged = merge(req, RouteDecision(attempts=[DEEP, INSTANT]), STATIC, url_check=any_web_url)
+    assert (merged.tool, merged.providers) == ("search", ("exa:exa-deep", "exa:exa-instant"))
