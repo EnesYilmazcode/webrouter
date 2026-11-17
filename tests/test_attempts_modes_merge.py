@@ -38,6 +38,7 @@ def test_the_attempts_rank_the_method_modes_included_and_the_other_backends_foll
     assert merged.tool == "search", "attempts replace tools"
     assert merged.providers == ("exa:exa-instant", "exa:exa-deep", "tavily", "brave", "exa")
     assert merged.record()["merged"][:2] == [INSTANT, DEEP]
+    assert not {INSTANT, DEEP} & set(merged.notes.ignored), "a mode attempts run is not noted as not run"
 
 
 def test_the_first_attempt_picks_the_method_and_an_unknown_one_is_noted() -> None:
