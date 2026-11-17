@@ -1,4 +1,4 @@
-"""A pinned mode is priced as that mode, on the response and in a budget; and what a backend offers a router."""
+"""A pinned mode is priced as that mode and built with its backend's config; and what a backend offers a router."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ import httpx
 import pytest
 
 from web_router import Budget, WebRouter, prices_modes
+from web_router.exceptions import ConfigurationError
 from web_router.modes import Content, Flag, ModeDeclarations, Tier
 from web_router.providers._modes import offers
+from web_router.providers.auto import AutoProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.pricing import attempt_cost
 from web_router.types import SearchRequest
@@ -75,3 +77,8 @@ def test_offers_are_each_tier_at_the_default_depth_then_each_depth_and_content_t
 def test_a_tier_that_is_the_default_is_not_offered_twice_and_a_class_may_set_its_own() -> None:
     assert "acme-pro" not in offers(type("Pro", (Acme,), {"default_tier": "acme-pro"}))
     assert offers(type("Own", (Acme,), {"offers": ("acme-turbo+deep",)})) == ("acme-turbo+deep",)
+
+
+def test_a_pinned_chain_entry_is_held_to_its_backends_client_rule_at_construction() -> None:
+    with pytest.raises(ConfigurationError, match="not both"):
+        AutoProvider(chain=["nimble:lite"], members_config={"nimble": {"async_client": object(), "api_key": "k"}})

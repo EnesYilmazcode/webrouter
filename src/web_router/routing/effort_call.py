@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
-from web_router.providers._modes import pinned_for
+from web_router.providers._pinning import pinned_for
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.eligible import eligible_members
 from web_router.routing.params import EffortChoice, shared_effort

@@ -58,7 +58,7 @@ from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as 
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
 from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
-from web_router.providers._modes import pinned_class
+from web_router.providers._pinning import pinned_class
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:

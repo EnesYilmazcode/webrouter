@@ -42,7 +42,7 @@ from web_router.constants_budget import (
 )
 from web_router.constants_modes import PART_SEP
 from web_router.prices_modes import mode_price
-from web_router.providers._modes import split_pin
+from web_router.providers._pinning import split_pin
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
