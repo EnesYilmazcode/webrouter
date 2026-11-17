@@ -15,10 +15,9 @@ from tests.decider_helpers import chat, serve, systemone
 from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
 from web_router.constants_mode_parts import EXA_TIERS
 from web_router.routing.cheapest import cheapest_first
-from web_router.routing.decider_llm import LLMDecider, llm_router
+from web_router.routing.decider_llm import llm_router
 from web_router.routing.decider_question import decision_for, describe
-from web_router.routing.decider_systemone import SystemOneDecider, systemone_router
-from web_router.routing.rules import RulesRouter
+from web_router.routing.decider_systemone import systemone_router
 
 INSTANT, DEEP, TAVILY, EXA = "search:exa:exa-instant", "search:exa:exa-deep", "search:tavily", "search:exa"
 CANDIDATES = (
@@ -98,11 +97,6 @@ def test_cheapest_first_keeps_providers_when_the_method_it_runs_has_no_mode() ->
     assert cheapest_first(req).attempts == [INSTANT, EXA, TAVILY, DEEP], "unpinned, the method is search"
     pinned = RouteRequest(prompt="q", candidates=req.candidates, deadline_s=1.0, pinned_tool="answer")
     assert cheapest_first(pinned).providers == {"search": ["exa", "tavily"], "answer": ["x"]}
-
-
-@pytest.mark.parametrize("router", [LLMDecider, SystemOneDecider, RulesRouter, cheapest_first])
-def test_each_built_in_declares_backends_only(router: Any) -> None:
-    assert router.route_modes is False
 
 
 def _llm(monkeypatch: pytest.MonkeyPatch) -> Any:

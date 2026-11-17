@@ -36,16 +36,12 @@ def cheapest_first(req: RouteRequest) -> RouteDecision:
     for candidate in req.candidates:
         by_tool[candidate.tool].append(candidate)
     tool = req.pinned_tool or LAST_RESORT_TOOL
+    for candidates in by_tool.values():
+        candidates.sort(key=lambda c: cost_key(c.est_cost_usd))  # stable: ties as offered
     if any(candidate.mode is not None for candidate in by_tool[tool]):
-        return RouteDecision(attempts=[c.id for c in _by_cost(by_tool[tool])], reason=CHEAPEST_REASON)
-    providers = {
-        tool: [c.provider for c in _by_cost(candidates) if c.mode is None] for tool, candidates in by_tool.items()
-    }
+        return RouteDecision(attempts=[c.id for c in by_tool[tool]], reason=CHEAPEST_REASON)
+    providers = {tool: [c.provider for c in candidates if c.mode is None] for tool, candidates in by_tool.items()}
     return RouteDecision(providers=providers, reason=CHEAPEST_REASON)
-
-
-def _by_cost(candidates: list[Candidate]) -> list[Candidate]:
-    return sorted(candidates, key=lambda c: cost_key(c.est_cost_usd))
 
 
 setattr(cheapest_first, ROUTER_ROUTE_MODES_ATTR, False)  # backends only unless the caller shows it modes
