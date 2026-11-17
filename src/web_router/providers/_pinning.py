@@ -19,14 +19,13 @@ from web_router.constants_modes import (
     EFFORT_LEVELS,
     ID_SEP,
     MODE_FIELD,
-    MSG_PIN_DEPTH,
     MSG_PIN_EFFORT,
     MSG_PIN_TOOL,
     TOOLS,
 )
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.modes import Declared, Slots, parse_id
-from web_router.providers._modes import SEARCH, slots
+from web_router.providers._modes import SEARCH, refuse_depth, slots
 from web_router.types import SearchRequest, provider_name
 
 
@@ -37,9 +36,7 @@ def pinned_request(owner: Any, request: SearchRequest, mode: str) -> SearchReque
     content = owner.contents.get(found.depth) if found.depth else None
     level = content.as_depth if content else found.depth  # a content stands for its level: its limits apply
     if level in DEPTH_LEVELS:
-        if request.search_depth not in (None, level):
-            message = MSG_PIN_DEPTH.format(mode=mode, depth=level, asked=request.search_depth)
-            raise InvalidParameterError(MODE_FIELD, message)
+        refuse_depth(mode, level, request.search_depth)
         update["search_depth"] = level
     elif found.depth in EFFORT_LEVELS:
         if request.effort not in (None, found.depth):

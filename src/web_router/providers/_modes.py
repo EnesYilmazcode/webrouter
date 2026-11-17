@@ -16,6 +16,7 @@ from typing import Any, ClassVar, Literal, Protocol
 
 from web_router.constants_modes import (
     DEPTH_LEVELS,
+    EFFORT_LEVELS,
     MODE_FIELD,
     MSG_PIN_DEPTH,
     MSG_PIN_OPTION,
@@ -27,8 +28,8 @@ from web_router.modes import Content, Flag, Slots, Tier, split_mode
 from web_router.types import NormalizedRequest
 
 SEARCH: Literal["search"] = "search"
-PROBED = ("search_depth", "effort")
-"""The options a mode's wire may collide with: each is probed alone against the payload it changes."""
+PROBED = {"search_depth": DEPTH_LEVELS, "effort": EFFORT_LEVELS}
+"""The options a mode's wire may collide with, and their levels: each is probed alone for the fields it decides."""
 
 
 class ModeOwner(Protocol):
@@ -76,9 +77,8 @@ def with_mode(payload: dict[str, Any], owner: ModeOwner, request: NormalizedRequ
     content = owner.contents.get(found.depth) if found.depth else None
     for field in {*replaced, *laid} & set(request.provider_options):
         raise InvalidParameterError(MODE_FIELD, MSG_PIN_OPTION.format(mode=mode, field=field))
-    asked = getattr(request, "search_depth", None)
-    if content is not None and asked not in (None, content.as_depth):
-        raise InvalidParameterError(MODE_FIELD, MSG_PIN_DEPTH.format(mode=mode, depth=content.as_depth, asked=asked))
+    if content is not None:
+        refuse_depth(mode, content.as_depth, getattr(request, "search_depth", None))
     _refuse_collisions(owner, request, mode, {**replaced, **laid}, content is not None)
     return merged({**payload, **replaced}, laid)
 
@@ -95,9 +95,27 @@ def _refuse_collisions(
             continue
         alone = owner._build_payload(bare.model_copy(update={option: value}))
         for field, sent in wire.items():
-            if alone.get(field) != base.get(field) and alone.get(field) != sent:
+            decides = alone.get(field) != base.get(field) or _decides(owner, bare, option, field)
+            if decides and alone.get(field) != sent:
                 message = MSG_PIN_WRITES.format(mode=mode, field=field, option=option, value=value)
                 raise InvalidParameterError(MODE_FIELD, message)
+
+
+def _decides(owner: ModeOwner, bare: NormalizedRequest, option: str, field: str) -> bool:
+    """Whether ``option`` decides ``field``: its levels send the field in more than one way (``medium`` included)."""
+    seen = set()
+    for level in PROBED[option]:
+        try:
+            seen.add(repr(owner._build_payload(bare.model_copy(update={option: level})).get(field)))
+        except InvalidParameterError:
+            continue  # a level this backend does not take
+    return len(seen) > 1
+
+
+def refuse_depth(mode: str, level: str, asked: str | None) -> None:
+    """Refuse a ``search_depth`` other than ``level``, the one ``mode`` names or stands for."""
+    if asked not in (None, level):
+        raise InvalidParameterError(MODE_FIELD, MSG_PIN_DEPTH.format(mode=mode, depth=level, asked=asked))
 
 
 def offers(owner: Any) -> tuple[str, ...]:

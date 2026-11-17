@@ -27,7 +27,7 @@ its backend's `provider_config` entry:
 router = WebRouter(
     provider="auto",
     provider_config={
-        "auto": {"chain": ["exa:exa-instant", "tavily"]},
+        "auto": {"chain": {"search": ["exa:exa-instant", "tavily"]}},  # a pin is a search id
         "exa": {"api_key": "..."},  # also used for exa:exa-instant
     },
 )

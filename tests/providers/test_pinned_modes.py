@@ -81,6 +81,10 @@ def _refused(pin: str, monkeypatch: pytest.MonkeyPatch, **options: Any) -> Inval
         ("parallel:parallel-turbo", {"effort": "high"}, "effort='high'"),
         ("keenable:keenable-realtime", {"effort": "high"}, "effort='high'"),
         ("linkup:linkup-deep", {"effort": "low"}, "effort='low'"),
+        *[
+            (pin, {"effort": "medium"}, "effort='medium'")  # the default effort still decides the tier's field
+            for pin in ("exa:exa-instant", "parallel:parallel-turbo", "linkup:linkup-deep")
+        ],
     ],
 )
 def test_a_mode_is_refused_before_sending_when_the_caller_set_what_it_writes(
@@ -112,7 +116,7 @@ def test_a_content_never_combines_with_a_depth_but_takes_the_depth_it_stands_for
         ),
         ("brave:lite+brave-extra-snippets", {}, {"extra_snippets": True}),
         ("deepseek:deepseek-content", {"search_depth": "deep"}, {"need_content": True}),
-        ("exa:exa-instant", {"search_depth": "fast", "effort": "medium"}, {"type": "instant"}),
+        ("exa:exa-instant", {"search_depth": "fast"}, {"type": "instant"}),
     ],
 )
 def test_a_flag_or_tier_combines_with_any_depth_it_does_not_overwrite(
