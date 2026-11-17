@@ -34,9 +34,10 @@ def describe(candidate: Candidate) -> str:
 
 
 def question_for(req: RouteRequest) -> DeciderQuestion:
-    """The question for ``req``: every candidate but extract when the prompt names no URL, since a decider
-    sets no URL for it to read."""
-    options = {c.id: describe(c) for c in req.candidates if c.tool != "extract" or req.urls}
+    """The question for ``req``: every backend's candidate but extract when the prompt names no URL, since a
+    decider sets no URL for it to read. A vendor mode is left out: the call runs a backend at its default mode,
+    so a mode's price and p90 would mislead the pick."""
+    options = {c.id: describe(c) for c in req.candidates if c.mode is None and (c.tool != "extract" or req.urls)}
     pinned = DECIDER_PINNED.format(tool=req.pinned_tool) if req.pinned_tool else ""
     return DeciderQuestion(
         prompt=req.prompt,
