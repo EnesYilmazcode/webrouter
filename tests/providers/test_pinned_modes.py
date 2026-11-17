@@ -81,6 +81,7 @@ def _refused(pin: str, monkeypatch: pytest.MonkeyPatch, **options: Any) -> Inval
         ("parallel:parallel-turbo", {"effort": "high"}, "effort='high'"),
         ("keenable:keenable-realtime", {"effort": "high"}, "effort='high'"),
         ("linkup:linkup-deep", {"effort": "low"}, "effort='low'"),
+        ("deepseek:deepseek-content", {"search_depth": "lite"}, "search_depth='lite'"),  # lite sends need_content too
         *[
             (pin, {"effort": "medium"}, "effort='medium'")  # the default effort still decides the tier's field
             for pin in ("exa:exa-instant", "parallel:parallel-turbo", "linkup:linkup-deep")
