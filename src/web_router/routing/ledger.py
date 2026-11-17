@@ -58,8 +58,7 @@ class _Tried:
     provider: str
     est_cost_usd: float | None
     started: float
-    attempt: Attempt | None = None
-    mode: str | None = None
+    attempt: Attempt
 
 
 @dataclass
@@ -110,7 +109,7 @@ class Ledger:
             if reserve:
                 self.trail.start(len(self.tried), name)
             self.spent += cost or 0.0
-            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt, attempt.mode))
+            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
             return True
 
     def undo(self, attempt: Attempt, *, release: bool = False) -> None:
@@ -209,7 +208,7 @@ class Ledger:
             "cost_is_estimate": True,
             "attempts": [
                 DecisionAttempt(
-                    id=tried.id, mode=tried.mode, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started
+                    id=tried.id, mode=tried.attempt.mode, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started
                 )
                 for tried, end in zip(attempts, ends, strict=True)
             ],
