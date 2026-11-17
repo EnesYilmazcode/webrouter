@@ -101,3 +101,15 @@ def test_the_record_lists_each_mode_and_the_hooks_see_the_full_id(monkeypatch: p
     record = response.decision
     assert record is not None
     assert [(a.id, a.mode) for a in record.attempts or ()] == [(INSTANT, "exa-instant"), (DEEP, "exa-deep")]
+
+
+def test_a_mode_the_cap_cannot_cover_is_skipped_before_anything_is_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch)
+    cap = 0.01  # under either Exa mode, over Tavily's default
+    assert min(price("exa-instant") or 0, price("exa-deep") or 0) > cap
+    with routed(INSTANT, DEEP, TAVILY) as wr:
+        response = wr.search("q", budget=Budget(max_cost_usd=cap))
+    assert (calls.exa, len(calls.tavily), response.provider) == ([], 1, "tavily")
+    record = response.decision
+    assert record is not None and {INSTANT, DEEP} <= set(record.dropped or {}), "the budget dropped both modes"
+    assert {INSTANT, DEEP} <= set(record.ignored or {}), "so the router's attempts named no candidate"
