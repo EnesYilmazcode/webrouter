@@ -248,6 +248,7 @@ src/web_router/
 │   │                   decider answers with a ranking of option ids
 │   ├── decider_router.py DeciderRouter: a decider as a router, its timeout_s, name and close
 │   ├── decider_question.py a RouteRequest as a decider's question, its ranking as a decision
+│   ├── decider_modes.py a vendor mode's option text, and attempts ranked by backend x mode share
 │   ├── decider_reply.py the reply held to the question: offered str ids once, numbers in 0..1
 │   ├── decider_http.py the built-in deciders' endpoint, key and one JSON POST, on the remote rules
 │   ├── decider_llm.py  router="llm": any OpenAI-compatible chat API, by preset or base_url

@@ -175,8 +175,28 @@ When an attempt fails:
 The decision record lists each attempt by its full id, with `mode` set, and
 the answer's `cost_usd` is the price of the mode that answered.
 
+## Deciders and the built-in routers
+
+The built-in routers declare `route_modes=False`; pass `route_modes=True` to
+show them modes. A decider's option for a mode names it and says what each of
+its parts does, such as `search on exa in mode exa-instant (Exa's instant
+search, its fastest), $0.005, p90 0.9s`, so no two modes of one backend read
+the same. When it ranks a mode, its decision fills `attempts`.
+
+A decider that scores its options has the backend and its modes scored apart:
+the backend's own id (`search:exa`) scores the backend, and each of its modes
+takes its share of that backend's mode scores. Attempts rank by the product,
+so with `search:exa` at 0.6, `search:tavily` at 0.4, and Exa's instant and
+deep modes at 0.7 and 0.3, the order is `exa-instant` (0.42), `tavily`
+(0.40), `exa-deep` (0.18). A backend whose modes are scored runs in those
+modes. Without a score for every ranked id, or for a ranked mode's backend,
+the attempts keep the decider's order.
+
+`cheapest_first` shown modes answers `attempts` for the method the call runs:
+each backend and mode by its own estimated cost. `rules` picks the method
+only, so it never names one.
+
 ## Not yet
 
-The built-in routers do not fill `attempts` yet. Extract, answer, research
-and browse have no vendor modes. See [Smart routing](/smart-routing) for what
-a router picks today.
+Extract, answer, research and browse have no vendor modes. See [Smart
+routing](/smart-routing) for what a router picks today.
