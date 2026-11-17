@@ -12,6 +12,7 @@ import pytest
 
 from scripts.contracts_modes import parts
 from web_router.exceptions_typed import InvalidParameterError
+from web_router.providers._pinning import pinned_request
 from web_router.registry import create_provider, get_provider_class
 from web_router.types import SearchRequest
 
@@ -97,6 +98,8 @@ def test_a_content_never_combines_with_a_depth_but_takes_the_depth_it_stands_for
         create_provider("exa:exa-highlights", api_key="k"), SearchRequest(query="q", search_depth="lite"), monkeypatch
     )
     assert body["contents"] == {"highlights": True}
+    alone = pinned_request(get_provider_class("exa"), SearchRequest(query="q"), "exa-highlights")
+    assert (alone.search_depth, alone.mode) == ("lite", "exa-highlights")  # the lite limits apply to the answer
 
 
 @pytest.mark.parametrize(

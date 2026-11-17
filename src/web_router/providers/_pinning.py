@@ -34,19 +34,25 @@ def pinned_request(owner: Any, request: SearchRequest, mode: str) -> SearchReque
     """``request`` in ``mode``: its level fills ``search_depth`` or ``effort``, and ``mode`` is the canonical string."""
     found = slots(owner, mode)
     update: dict[str, Any] = {}
-    if found.depth in DEPTH_LEVELS:
-        if request.search_depth not in (None, found.depth):
-            message = MSG_PIN_DEPTH.format(mode=mode, depth=found.depth, asked=request.search_depth)
+    content = owner.contents.get(found.depth) if found.depth else None
+    level = content.as_depth if content else found.depth  # a content stands for its level: its limits apply
+    if level in DEPTH_LEVELS:
+        if request.search_depth not in (None, level):
+            message = MSG_PIN_DEPTH.format(mode=mode, depth=level, asked=request.search_depth)
             raise InvalidParameterError(MODE_FIELD, message)
-        update["search_depth"] = found.depth
+        update["search_depth"] = level
     elif found.depth in EFFORT_LEVELS:
         if request.effort not in (None, found.depth):
             message = MSG_PIN_EFFORT.format(mode=mode, effort=found.depth, asked=request.effort)
             raise InvalidParameterError(MODE_FIELD, message)
         update["effort"] = found.depth
-    depth = found.depth or request.search_depth
-    update["mode"] = Slots(found.tier, depth, found.flags).mode
+    update["mode"] = pinned_mode(found, request.search_depth)
     return request.model_copy(update=update)
+
+
+def pinned_mode(found: Slots, depth: str | None) -> str | None:
+    """The canonical mode a pin's ``found`` slots send at ``depth``: the pin's own depth slot wins."""
+    return Slots(found.tier, found.depth or depth, found.flags).mode
 
 
 def pinned_for(chain: Any, request: Any) -> Any:
