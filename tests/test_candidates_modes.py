@@ -61,7 +61,7 @@ def test_route_modes_shows_one_candidate_per_offered_mode_each_priced_on_its_own
         attempt = Attempt(tool="search", provider="exa", request=moded)
         assert (candidate.mode, candidate.est_cost_usd) == (moded.mode, attempt_cost(attempt))
         assert candidate.est_latency_s == attempt_p90(attempt)
-    assert candidates["search:exa:exa-instant"].est_cost_usd != candidates["search:exa"].est_cost_usd
+    assert (candidates["search:exa:exa-instant"].est_cost_usd, candidates["search:exa"].est_cost_usd) == (0.014, 0.017)
     ordered = list(candidates)
     assert ordered.index("search:tavily") > max(i for i, cid in enumerate(ordered) if cid.startswith("search:exa:"))
 
