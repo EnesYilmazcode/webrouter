@@ -153,6 +153,12 @@ class PoolChain:
                 pool._reserved += cost
         return None
 
+    def release(self, cost: float) -> None:
+        """Give back ``cost``, reserved for an attempt taken back, in every pool of the chain."""
+        for pool in self.pools:
+            with pool._lock:
+                pool._reserved -= cost
+
     def settle(self, cost: float) -> None:
         """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""
         for pool in self.pools:

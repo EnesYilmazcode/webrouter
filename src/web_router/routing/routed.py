@@ -152,7 +152,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         )
         if out.params:
             request = request.model_copy(update=dict(out.params))
-        return CallRoute(order={out.tool: out.providers}), request, out.record
+        return CallRoute(order={out.tool: out.providers}, router_params=frozenset(out.params)), request, out.record
 
 
 class SyncRouted(RouterSetup):

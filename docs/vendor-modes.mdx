@@ -143,9 +143,39 @@ and a `fallback` member that does not opt in is shown backends only. A remote
 request carries at most 64 candidates in all: past that, the modes lowest in
 their method's order are left out.
 
+## A router picks modes
+
+A router picks modes with `RouteDecision.attempts`: candidate ids, best first,
+which replace `tools` and `providers` when set. One backend may appear in
+several modes:
+
+```python
+RouteDecision(attempts=["search:exa:exa-instant", "search:exa:exa-deep", "search:tavily"])
+```
+
+Each attempt runs in its own mode. The mode replaces any `search_depth` or
+`effort` the router set in `params`; every other option still applies, and a
+`search_depth` you set binds every attempt. The call's backends that
+`attempts` does not name run after them, at their default mode. Excluding
+`search:exa` excludes every Exa mode; excluding `search:exa:exa-deep`
+excludes that one only. Under a cost cap the router's order is kept.
+
+When an attempt fails:
+
+- A backend that refuses the mode's request (a 400 or 422, and not out of
+  credit) is not charged for it, and its next attempt runs.
+- A failure that no other backend could do better on (a `local` or `target`
+  error) raises, as it does without modes.
+- Any other failure, an auth error, a 429, a 5xx or a timeout among them,
+  stops that backend for the call: its later attempts are passed over, each
+  recorded as `backend_failed`. A 429 or 402 cools down the backend, every
+  mode with it, as it always has.
+
+The decision record lists each attempt by its full id, with `mode` set, and
+the answer's `cost_usd` is the price of the mode that answered.
+
 ## Not yet
 
-A router can be shown modes, but not pick one: the call runs its backends at
-their default mode, and a vendor mode runs only when you pin it. Extract,
-answer, research and browse have no vendor modes yet. See
-[Smart routing](/smart-routing) for what a router picks today.
+The built-in routers do not fill `attempts` yet. Extract, answer, research
+and browse have no vendor modes. See [Smart routing](/smart-routing) for what
+a router picks today.

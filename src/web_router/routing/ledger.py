@@ -44,18 +44,12 @@ from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, candidate_id
 from web_router.routing.pool import PoolChain
-from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
+from web_router.routing.pricing import attempt_cost, attempt_p90, misfit, usd
 from web_router.routing.record import error_code
 from web_router.routing.trail import HopTrail
 from web_router.types_decision import DecisionAttempt, DecisionRecord
 
 _SKIPS = {UNKNOWN_PRICE: SKIP_PRICE_UNKNOWN, UNKNOWN_P90: SKIP_LATENCY_UNKNOWN}
-
-
-def _usd(value: float) -> str:
-    """Dollars as the price list states them, never rounded to cents: ``$0.025``, ``$0.0011``, ``$1.00``."""
-    whole, _, cents = f"{value:.6f}".rstrip("0").partition(".")
-    return f"${whole}.{cents.ljust(2, '0')}"
 
 
 @dataclass
@@ -65,6 +59,7 @@ class _Tried:
     est_cost_usd: float | None
     started: float
     attempt: Attempt | None = None
+    mode: str | None = None
 
 
 @dataclass
@@ -99,7 +94,7 @@ class Ledger:
         in the shared budget and keeps in its hop trail; a nested call's attempt
         counts only toward the cap, and leaves the call's own attempt open.
         """
-        name = candidate_id(attempt.tool, attempt.provider)
+        name = attempt.id
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         with self._lock:
             if self.closed:
@@ -115,16 +110,20 @@ class Ledger:
             if reserve:
                 self.trail.start(len(self.tried), name)
             self.spent += cost or 0.0
-            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
+            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt, attempt.mode))
             return True
 
-    def undo(self, attempt: Attempt) -> None:
-        """Take back a nested call's ``attempt``, which that call then refused; nothing else is touched."""
+    def undo(self, attempt: Attempt, *, release: bool = False) -> None:
+        """Take back ``attempt``, a nested call's it refused or a refused mode; ``release`` frees its reservation."""
         with self._lock:
             at = next((i for i in reversed(range(len(self.tried))) if self.tried[i].attempt is attempt), None)
+            cost = 0.0 if at is None else self.tried.pop(at).est_cost_usd or 0.0
+            self.spent -= cost
             if at is not None:
-                self.spent -= self.tried.pop(at).est_cost_usd or 0.0
                 self.trail.undo(at)
+            if release and self.pool is not None and cost:
+                self.pool.release(cost)
+                self.reserved -= cost
 
     def close(self) -> float:
         """End the call: later attempts are not its to check. Returns what it reserved, for the pool to settle."""
@@ -140,7 +139,7 @@ class Ledger:
         if left is None:
             self.reserved += cost
             return None
-        return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
+        return SKIP_OVER_SHARED.format(cost=usd(cost), left=usd(max(left, 0.0)))
 
     def _misfit(self, cost: float | None, p90: float | None) -> str | None:
         """Why the attempt does not fit what is left of the money and the time, worded for the record."""
@@ -153,7 +152,7 @@ class Ledger:
             return SKIP_NO_TIME
         code = code or misfit(None, p90, None, time_left, self.budget.strict)
         if code == OVER_COST:
-            return SKIP_OVER_COST.format(cost=_usd(cost or 0.0), left=_usd(max(cost_left or 0.0, 0.0)))
+            return SKIP_OVER_COST.format(cost=usd(cost or 0.0), left=usd(max(cost_left or 0.0, 0.0)))
         if code == OVER_TIME:
             return SKIP_OVER_TIME.format(p90=p90, left=time_left)
         return None if code is None else _SKIPS[code]
@@ -209,7 +208,9 @@ class Ledger:
             "estimated_cost_usd": sum(known) if known else None,
             "cost_is_estimate": True,
             "attempts": [
-                DecisionAttempt(id=tried.id, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started)
+                DecisionAttempt(
+                    id=tried.id, mode=tried.mode, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started
+                )
                 for tried, end in zip(attempts, ends, strict=True)
             ],
             "hops": hops,

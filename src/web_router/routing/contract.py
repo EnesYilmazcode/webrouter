@@ -159,6 +159,9 @@ class RouteDecision:
     providers: Mapping[ToolName, Sequence[str]] | None = None
     """Per method, the backends to try, best first."""
 
+    attempts: Sequence[str] | None = None
+    """Candidate ids to try, best first, a vendor mode's included; set, it replaces ``tools`` and ``providers``."""
+
     exclude: Mapping[str, str] = field(default_factory=dict)
     """Candidates never to try, by id, each with the reason."""
 
