@@ -176,7 +176,7 @@ def parse_id(
 ) -> ModeId:
     """``tool:provider[:mode]`` or ``provider[:mode]``, its mode canonical; ``declared_for(provider)`` gives the parts.
 
-    The benchmarks' ``tavily:ultra-fast@deep`` and ``tavily@deep`` parse too.
+    Only an id with ``@`` is an old spelling (``tavily:ultra-fast@deep``); ``tavily:ultra-fast`` raises.
     """
     head, mark, depth = text.partition(LEGACY_DEPTH_MARK)
     parts = head.split(ID_SEP)

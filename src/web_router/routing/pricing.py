@@ -40,6 +40,7 @@ from web_router.constants_budget import (
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
+from web_router.constants_modes import ID_SEP, PART_SEP
 from web_router.prices_modes import mode_price
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
@@ -102,20 +103,31 @@ def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:
 
 
 def attempt_mode(attempt: Attempt) -> str | None:
-    """The price list's mode for ``attempt``: a search's depth, a research run's effort, else ``None``."""
+    """The price list's mode for ``attempt``: a search's pinned mode, else its depth; a research run's effort."""
     request = attempt.request
     if isinstance(request, SearchRequest):
-        return request.search_depth
+        return request.mode or request.search_depth
     if isinstance(request, ResearchRequest):
         return request.effort
     return None
+
+
+def priced_as(attempt: Attempt) -> tuple[str, str | None]:
+    """The backend and mode ``attempt`` is priced at: a chain entry's pinned mode (``exa:exa-instant``) joins its."""
+    provider, _, pinned = attempt.provider.partition(ID_SEP)
+    mode = attempt_mode(attempt)
+    if not pinned:
+        return provider, mode
+    parts = pinned.split(PART_SEP)
+    return provider, PART_SEP.join([*parts, mode] if mode and mode not in parts else parts)
 
 
 def attempt_cost(attempt: Attempt) -> float | None:
     """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call."""
     if _unpriced_mode(attempt) or _more_results_than_priced(attempt):
         return None
-    cost = mode_price(attempt.provider, attempt.tool, attempt_mode(attempt))
+    provider, mode = priced_as(attempt)
+    cost = mode_price(provider, attempt.tool, mode)
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
     if cost and isinstance(attempt.request, BrowserRequest):
@@ -139,7 +151,8 @@ def _more_results_than_priced(attempt: Attempt) -> bool:
     request = attempt.request
     if not isinstance(request, SearchRequest) or request.max_results is None:
         return False
-    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
+    provider, mode = priced_as(attempt)
+    row = prices.price(provider, attempt.tool, mode)
     assumed = None if row is None else row.results_assumed
     return assumed is not None and request.max_results > assumed
 
@@ -148,4 +161,5 @@ def attempt_p90(attempt: Attempt) -> float | None:
     """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured or ``provider_options`` may change it."""
     if _unpriced_mode(attempt):
         return None
-    return mode_p90(attempt.provider, attempt.tool, attempt_mode(attempt))
+    provider, mode = priced_as(attempt)
+    return mode_p90(provider, attempt.tool, mode)
