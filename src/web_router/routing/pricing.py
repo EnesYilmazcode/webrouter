@@ -40,8 +40,9 @@ from web_router.constants_budget import (
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
-from web_router.constants_modes import ID_SEP, PART_SEP
+from web_router.constants_modes import PART_SEP
 from web_router.prices_modes import mode_price
+from web_router.providers._modes import split_pin
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
@@ -114,7 +115,7 @@ def attempt_mode(attempt: Attempt) -> str | None:
 
 def priced_as(attempt: Attempt) -> tuple[str, str | None]:
     """The backend and mode ``attempt`` is priced at: a chain entry's pinned mode (``exa:exa-instant``) joins its."""
-    provider, _, pinned = attempt.provider.partition(ID_SEP)
+    provider, pinned = split_pin(attempt.provider)
     mode = attempt_mode(attempt)
     if not pinned:
         return provider, mode

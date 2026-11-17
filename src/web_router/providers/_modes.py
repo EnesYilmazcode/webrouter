@@ -29,6 +29,7 @@ from web_router.constants_modes import (
     MSG_PIN_TOOL,
     MSG_PIN_WRITES,
     PART_SEP,
+    TOOLS,
 )
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.modes import Content, Declared, Flag, Slots, Tier, parse_id, split_mode
@@ -162,6 +163,18 @@ class _PinnedSearch:
 @cache
 def _pinned(base: type, mode: str) -> type:
     return type(base.__name__, (_PinnedSearch, base), {"pinned": mode, "__module__": base.__module__})
+
+
+def split_pin(name: str) -> tuple[str, str]:
+    """A pinned id as its backend and its mode as written: ``search:exa:exa-instant`` is ``exa``, ``exa-instant``."""
+    parts = name.split(ID_SEP)
+    parts = parts[1:] if len(parts) > 1 and parts[0] in TOOLS else parts
+    return parts[0], ID_SEP.join(parts[1:])
+
+
+def backend_of(name: str) -> str:
+    """The backend a pinned id names (``exa`` for ``search:exa:exa-instant``); any other name as it is."""
+    return split_pin(name)[0]
 
 
 def pinned_class(name: Any, resolve: Callable[[str], type]) -> type:

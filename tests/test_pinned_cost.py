@@ -46,9 +46,14 @@ def test_a_budget_charges_the_pinned_modes_price(monkeypatch: pytest.MonkeyPatch
         assert shared.status().spent_usd == pytest.approx(INSTANT)
 
 
-def test_a_chain_entry_that_pins_a_mode_is_priced_as_that_mode() -> None:
-    entry = Attempt(tool="search", provider="exa:exa-instant", request=SearchRequest(query="q"))
-    assert attempt_cost(entry) == INSTANT
+@pytest.mark.parametrize("entry", ["exa:exa-instant", "search:exa:exa-instant"])
+def test_a_chain_entry_that_pins_a_mode_is_priced_as_that_mode(entry: str) -> None:
+    assert attempt_cost(Attempt(tool="search", provider=entry, request=SearchRequest(query="q"))) == INSTANT
+
+
+def test_a_pinned_backend_is_built_with_its_backends_config() -> None:
+    with WebRouter(provider_config={"exa": {"api_key": "from-config"}}) as router:
+        assert router.get_provider("exa:exa-instant").api_key == "from-config"  # type: ignore[attr-defined]
 
 
 class Acme(ModeDeclarations):
