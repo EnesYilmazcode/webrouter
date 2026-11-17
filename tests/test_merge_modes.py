@@ -1,5 +1,5 @@
-"""The merge runs backends only: a vendor mode candidate never picks the method, ranks a backend or reaches a
-decider's question, since the call runs each backend at its default mode."""
+"""The merge's ``tools`` and ``providers`` run backends only: a vendor mode candidate never picks the method or ranks
+a backend there, since only ``attempts`` run a mode; a decider is offered modes and answers them as attempts."""
 
 from __future__ import annotations
 
@@ -35,5 +35,5 @@ def test_a_mode_id_ranked_as_a_backend_is_noted_not_dropped_silently() -> None:
     assert "vendor mode" in merged.notes.ignored["search:exa:lite"]
 
 
-def test_a_deciders_question_offers_backends_only() -> None:
-    assert list(question_for(MODE_ONLY_SEARCH).options) == ["answer:perplexity"]
+def test_a_deciders_question_offers_modes_too() -> None:
+    assert list(question_for(MODE_ONLY_SEARCH).options) == ["search:exa:exa-instant", "answer:perplexity"]
