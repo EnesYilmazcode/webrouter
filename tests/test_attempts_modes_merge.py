@@ -71,6 +71,11 @@ def test_attempts_alone_decide_something_and_must_be_a_list_of_ids() -> None:
     assert not well_formed(RouteDecision(attempts=INSTANT))  # a bare string is no ranking
 
 
+def test_empty_attempts_are_unset_so_the_decisions_providers_still_rank() -> None:
+    merged = _merged(RouteDecision(attempts=[], providers={"search": ["tavily"]}))
+    assert merged.providers[0] == "tavily" and not merged.notes.empty
+
+
 def test_attempts_count_as_a_ranking_so_the_cost_order_does_not_replace_the_static_order() -> None:
     found = CandidateSet(candidates=CANDIDATES, cost_order={"search": ["tavily", "exa", "brave"]})
     assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"]
