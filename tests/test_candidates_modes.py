@@ -186,3 +186,12 @@ def test_a_tier_the_effort_asked_would_overwrite_is_dropped_as_pinning_it_refuse
     tiers = [f"search:exa:{tier}" for tier in get_provider_class("exa").tiers]
     assert not set(tiers) & set(ids(found)) and all("effort='medium'" in found.dropped[cid] for cid in tiers)
     assert "search:exa:exa-highlights" in ids(found), "a content writes no type: still offered"
+
+
+def test_a_bug_in_a_backends_payload_builder_surfaces_rather_than_hiding_its_modes(keys: Any) -> None:
+    def broken(self: Any, request: Any) -> dict[str, Any]:
+        raise KeyError("a bug, not a refusal")
+
+    keys.setattr(get_provider_class("exa"), "_build_payload", broken)
+    with pytest.raises(KeyError, match="a bug"):
+        build_candidates(WebRouter(provider_config=CHAIN), SEARCH, modes=True)
