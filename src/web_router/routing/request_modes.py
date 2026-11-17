@@ -1,0 +1,40 @@
+"""What a router that did not opt in to vendor modes is shown, and how many candidates a remote request carries.
+
+Experimental. A router is shown a candidate per vendor mode only when it opts in (``route_modes``). The
+``fallback`` router shows each member the request it would see alone, so :func:`backends_only` strips the mode
+candidates for a member that did not; the ``remote`` router strips them unless its ``router_config`` opts in.
+:func:`within` holds a request to the wire's limit of entries in one list, across every method: the mode
+candidates go first, the lowest in their method's static order first, and the rest keep their order.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import replace
+
+from web_router.routing.contract import Candidate, RouteRequest
+
+
+def backends_only(req: RouteRequest) -> RouteRequest:
+    """``req`` without its vendor mode candidates: what a router that did not opt in is shown."""
+    if all(candidate.mode is None for candidate in req.candidates):
+        return req
+    return replace(req, candidates=tuple(c for c in req.candidates if c.mode is None))
+
+
+def within(req: RouteRequest, limit: int) -> RouteRequest:
+    """``req`` with at most ``limit`` candidates: the mode candidates lowest in their method's order dropped first."""
+    if len(req.candidates) <= limit:
+        return req
+    keep = set(sorted(range(len(req.candidates)), key=_rank(req.candidates))[:limit])
+    return replace(req, candidates=tuple(c for at, c in enumerate(req.candidates) if at in keep))
+
+
+def _rank(candidates: tuple[Candidate, ...]) -> Callable[[int], tuple[bool, int, int]]:
+    """The sort key of a candidate's index: backends before modes, then its place in its method's static order."""
+    places: dict[str, int] = {}
+    place: list[int] = []
+    for candidate in candidates:
+        place.append(places.get(candidate.tool, 0))
+        places[candidate.tool] = place[-1] + 1
+    return lambda at: (candidates[at].mode is not None, place[at], at)

@@ -45,6 +45,9 @@ def _order(value: object) -> float:
 class SystemOneDecider:
     """Asks a System One API one ``choice`` question per routed call, never retried."""
 
+    route_modes = False
+    """Shown backends only, until it ranks vendor modes; a caller's ``route_modes=True`` still shows them."""
+
     def __init__(
         self,
         *,

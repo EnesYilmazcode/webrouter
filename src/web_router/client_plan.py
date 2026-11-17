@@ -73,7 +73,7 @@ class _Planner(RouterSetup):
             requests["extract"] = ExtractRequest(urls=[ONE_PAGE_URL])
         if tool is not None:
             requests = {tool: requests[tool]} if tool in requests else {}
-        found = build_candidates(self, requests, budget=budget)
+        found = build_candidates(self, requests, budget=budget, modes=self._route_modes)
         deadline = 0.0 if self._router is None else self._router.deadline(budget)
         req = RouteRequest(
             prompt=prompt,

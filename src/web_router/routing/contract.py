@@ -26,9 +26,11 @@ _WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
 """How pydantic reads these types for the wire format's JSON Schema: each field's docstring is its description."""
 
 
-def candidate_id(tool: str, provider: str) -> str:
-    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``."""
-    return f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
+    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
+    mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
+    base = f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+    return base if mode is None else f"{base}{CANDIDATE_ID_SEPARATOR}{mode}"
 
 
 def _finite_cap(value: object) -> bool:
@@ -81,7 +83,7 @@ class Budget:
 
 @dataclass(frozen=True, kw_only=True)
 class Candidate:
-    """One (tool, provider) pair that could serve the call, with what it is estimated to cost and take."""
+    """One (tool, provider) pair, or one of its vendor modes, that could serve the call, with its cost and time."""
 
     __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
 
@@ -91,6 +93,10 @@ class Candidate:
     provider: str
     """The backend that would serve it, by registry name."""
 
+    mode: str | None = None
+    """The backend's vendor mode, canonical (``exa-instant+lite``); ``None`` for its default. Offered only to a router
+    that opts in with ``route_modes``."""
+
     est_cost_usd: float | None = None
     """Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown."""
 
@@ -98,10 +104,11 @@ class Candidate:
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""
 
     id: str = ""
-    """``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs."""
+    """``tool:provider``, or ``tool:provider:mode`` with a mode: the name every decision field uses. Filled in when
+    left empty, refused when it differs."""
 
     def __post_init__(self) -> None:
-        expected = candidate_id(self.tool, self.provider)
+        expected = candidate_id(self.tool, self.provider, self.mode)
         if not self.id:
             object.__setattr__(self, "id", expected)
         elif self.id != expected:

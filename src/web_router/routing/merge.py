@@ -60,8 +60,11 @@ __all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge"]
 def _order(
     tool: str, request: RouteRequest, ranked: Sequence[str], excluded: Collection[str], static: Mapping[Any, Any]
 ) -> tuple[str, ...]:
-    """``ranked`` first, then the static order, then any candidate the static order leaves out; none excluded."""
-    names = [c.provider for c in request.candidates if c.tool == tool and c.id not in excluded]
+    """``ranked`` first, then the static order, then any candidate the static order leaves out; none excluded.
+
+    Backends only: a vendor mode candidate is not run by name, so its backend is ordered only by its own candidate.
+    """
+    names = [c.provider for c in request.candidates if c.tool == tool and c.mode is None and c.id not in excluded]
     pool = set(names)
     return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
 

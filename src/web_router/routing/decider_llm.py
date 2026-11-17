@@ -68,6 +68,9 @@ def checked_mode(mode: object) -> str:
 class LLMDecider:
     """Asks a chat model to rank the options: one chat completion per routed call, never retried."""
 
+    route_modes = False
+    """Shown backends only, until it ranks vendor modes; a caller's ``route_modes=True`` still shows them."""
+
     def __init__(
         self,
         *,

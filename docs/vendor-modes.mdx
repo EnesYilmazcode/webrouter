@@ -122,9 +122,30 @@ tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spellings
 `tavily@deep` and `tavily:ultra-fast@deep` still parse; `tavily:ultra-fast`
 without `@` is no vendor mode.
 
+## Showing modes to a router
+
+A router can be shown each search backend's modes as candidates of their own,
+opt in, with `route_modes=True`:
+
+```python
+router = WebRouter(router=my_router, route_modes=True)
+```
+
+Each backend's candidate (`search:exa`) is then followed by one per mode it
+offers (`search:exa:exa-instant`), with `mode` set and its own estimated cost
+and p90. A mode the request rules out -- a `search_depth` you set that it
+would overwrite, a `provider_options` key it writes -- is left out, recorded
+with why, and a budget prefilters modes as it does backends. A router that
+declares a `route_modes` attribute opts itself in; yours, when you pass one,
+wins. The built-in routers declare `False`. The `remote` router is shown modes
+only when its `router_config` sets `"route_modes": True`, whatever you pass,
+and a `fallback` member that does not opt in is shown backends only. A remote
+request carries at most 64 candidates in all: past that, the modes lowest in
+their method's order are left out.
+
 ## Not yet
 
-Routing on modes is not on yet: a router picks backends at their default mode,
-and a vendor mode runs only when you pin it. Extract, answer, research and
-browse have no vendor modes yet. See [Smart routing](/smart-routing) for what a
-router picks today.
+A router can be shown modes, but not pick one: the call runs its backends at
+their default mode, and a vendor mode runs only when you pin it. Extract,
+answer, research and browse have no vendor modes yet. See
+[Smart routing](/smart-routing) for what a router picks today.

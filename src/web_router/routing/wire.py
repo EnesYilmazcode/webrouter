@@ -26,6 +26,7 @@ from typing import Any
 from pydantic import TypeAdapter, ValidationError
 
 from web_router.constants_remote import (
+    CANDIDATE_MODE_KEY,
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_SCHEMA,
@@ -39,6 +40,7 @@ from web_router.constants_remote import (
 )
 from web_router.routing._runner import InvalidAnswer
 from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing.request_modes import within
 
 
 class WireError(InvalidAnswer, ValueError):
@@ -81,8 +83,17 @@ def _payload(data: object) -> dict[str, Any]:
 
 
 def request_to_wire(req: RouteRequest) -> dict[str, Any]:
-    """``req`` as the JSON object a router service receives, ``"schema": 1`` first."""
-    return _versioned(_request_adapter().dump_python(req, mode="json"))
+    """``req`` as the JSON object a router service receives, ``"schema": 1`` first.
+
+    It carries at most :data:`WIRE_MAX_NAMES` candidates in all, as a decision may name at most that many: past
+    it, the vendor mode candidates lowest in their method's static order are left out (:func:`.request_modes.within`).
+    A candidate's ``mode`` is sent only when it has one, so a router shown backends only reads what it always has.
+    """
+    body = _request_adapter().dump_python(within(req, WIRE_MAX_NAMES), mode="json")
+    for candidate in body["candidates"]:
+        if candidate.get(CANDIDATE_MODE_KEY, "") is None:
+            del candidate[CANDIDATE_MODE_KEY]
+    return _versioned(body)
 
 
 def request_from_wire(data: object) -> RouteRequest:

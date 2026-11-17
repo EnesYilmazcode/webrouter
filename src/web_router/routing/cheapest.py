@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from web_router.constants_invoke import ROUTER_ROUTE_MODES_ATTR
 from web_router.constants_routing import CHEAPEST_REASON
 from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterLike
@@ -34,6 +35,9 @@ def cheapest_first(req: RouteRequest) -> RouteDecision:
         for tool, candidates in by_tool.items()
     }
     return RouteDecision(providers=providers, reason=CHEAPEST_REASON)
+
+
+setattr(cheapest_first, ROUTER_ROUTE_MODES_ATTR, False)  # shown backends only: it orders by backend name
 
 
 def cheapest_router() -> RouterLike:
