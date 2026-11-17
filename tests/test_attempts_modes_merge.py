@@ -80,6 +80,8 @@ def test_attempts_count_as_a_ranking_so_the_cost_order_does_not_replace_the_stat
     found = CandidateSet(candidates=CANDIDATES, cost_order={"search": ["tavily", "exa", "brave"]})
     assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"]
     assert _base_order(found, RouteDecision())["search"] == ["tavily", "exa", "brave"], "ranked by none: cost order"
+    dropped = RouteDecision(attempts=["search:exa:dropped-by-the-cap"])
+    assert _base_order(found, dropped)["search"] == ["tavily", "exa", "brave"], "no attempt left: cost order"
 
 
 def test_under_a_cost_cap_the_routers_attempts_keep_their_order(monkeypatch: pytest.MonkeyPatch) -> None:
