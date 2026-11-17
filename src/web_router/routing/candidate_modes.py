@@ -33,10 +33,12 @@ def mode_requests(router: Any, tool: str, request: NormalizedRequest, name: str)
     if tool != SEARCH or not isinstance(request, SearchRequest) or request.mode:
         return []
     owner = _member(router, tool, name)
-    if owner is None or getattr(owner, "pinned", None) or not hasattr(owner, "tiers"):
+    if owner is None or getattr(owner, "pinned", None):
+        return []
+    default = _payload(owner, request)
+    if default is None:  # no payload to merge a mode into, or the request fails for this backend in any mode
         return []
     entries: list[ModeEntry] = []
-    default = owner._build_payload(request)  # built, never sent
     for offered in offers(owner):
         try:
             moded = pinned_request(owner, request, offered)
@@ -44,9 +46,22 @@ def mode_requests(router: Any, tool: str, request: NormalizedRequest, name: str)
         except InvalidParameterError as exc:
             entries.append((offered, MSG_DROPPED_REFUSES_MODE.format(why=exc)))
             continue
+        except Exception as exc:  # the backend's own refusal: named by class, since its text may quote the query
+            entries.append((offered, MSG_DROPPED_REFUSES_MODE.format(why=type(exc).__name__)))
+            continue
         if moded.mode and payload != default:
             entries.append((moded.mode, moded))
     return entries
+
+
+def _payload(owner: Any, request: SearchRequest) -> dict[str, Any] | None:
+    """The payload ``owner`` builds for ``request``, never sent; ``None`` when it builds none -- a backend of the
+    caller's own may call its API another way -- or refuses the request itself, such as a query over its limit. The
+    call reports that when it runs; building candidates never raises on it."""
+    try:
+        return dict(owner._build_payload(request))
+    except Exception:
+        return None
 
 
 def _member(router: Any, tool: str, name: str) -> Any:

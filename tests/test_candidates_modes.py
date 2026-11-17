@@ -6,16 +6,18 @@ Offline: the members are read from their classes and the shipped price list; not
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
 
 from tests.candidates_helpers import Shown, clear_keys, ids, set_keys
+from tests.conftest import FakeProvider
 from web_router import Budget, Candidate, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._modes import offers
 from web_router.providers._pinning import pinned_request
-from web_router.registry import get_provider_class
+from web_router.registry import get_provider_class, register_provider, unregister_provider
 from web_router.routing.attempts import Attempt
 from web_router.routing.candidates import build_candidates
 from web_router.routing.cheapest import cheapest_first
@@ -151,3 +153,27 @@ def test_research_under_a_budget_with_a_router_that_times_out_runs_the_shared_ef
         plan = wr.plan("q", tool="research", budget=cap)
     assert plan.decision.router_timeout is True
     assert plan.params["effort"] == map_effort("parallel", cap).effort == "low", "today's shared_effort pick"
+
+
+@pytest.fixture
+def custom() -> Iterator[None]:
+    """A registered backend of the caller's own: it maps search_depth, so it offers depths, and builds no payload."""
+    register_provider(FakeProvider.name, FakeProvider)
+    yield
+    unregister_provider(FakeProvider.name)
+
+
+def test_a_backend_that_builds_no_payload_is_offered_without_modes(keys: Any, custom: None) -> None:
+    router = WebRouter(provider_config={"auto": {"chain": {"search": ["fake", "exa"]}}})
+    found = build_candidates(router, SEARCH, modes=True)
+    assert ids(found)[0] == "search:fake" and not any(cid.startswith("search:fake:") for cid in ids(found))
+    assert any(cid.startswith("search:exa:") for cid in ids(found)), "the next backend still offers its modes"
+
+
+def test_a_query_a_backend_refuses_offers_its_candidate_without_modes(monkeypatch: pytest.MonkeyPatch) -> None:
+    set_keys(clear_keys(monkeypatch), "brave")
+    too_long = {"search": SearchRequest(query="word " * 600)}  # over Brave's 75 words
+    found = build_candidates(
+        WebRouter(provider_config={"auto": {"chain": {"search": ["brave"]}}}), too_long, modes=True
+    )
+    assert ids(found) == ["search:brave"], "the call reports the query; building candidates does not raise"
