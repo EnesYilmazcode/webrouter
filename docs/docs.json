@@ -48,51 +48,67 @@
     }
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Get started",
-        "pages": [
-          "index",
-          "quickstart",
-          "how-it-works",
-          "providers"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "quickstart",
+              "how-it-works",
+              "providers"
+            ]
+          },
+          {
+            "group": "Methods",
+            "pages": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "live-data",
+              "vendors",
+              "browser"
+            ]
+          },
+          {
+            "group": "Agents and routing",
+            "pages": [
+              "mcp-server",
+              "integrations",
+              "agent-prompt",
+              "budgets",
+              "smart-routing"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "production",
+              "benchmarks",
+              "custom-providers"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "configuration",
+              "errors"
+            ]
+          }
         ]
       },
       {
-        "group": "Methods",
-        "pages": [
-          "search",
-          "extract",
-          "answer",
-          "research",
-          "live-data",
-          "browser"
-        ]
-      },
-      {
-        "group": "Agents and routing",
-        "pages": [
-          "mcp-server",
-          "integrations",
-          "agent-prompt",
-          "budgets",
-          "smart-routing"
-        ]
-      },
-      {
-        "group": "Guides",
-        "pages": [
-          "production",
-          "benchmarks",
-          "vendors",
-          "custom-providers"
-        ]
-      },
-      {
-        "group": "Reference",
-        "pages": [
-          "configuration",
-          "errors"
+        "tab": "Data API catalog",
+        "groups": [
+          {
+            "group": "Data API catalog",
+            "pages": [
+              "data-apis"
+            ]
+          }
         ]
       }
     ]
