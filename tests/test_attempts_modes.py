@@ -113,3 +113,15 @@ def test_a_mode_the_cap_cannot_cover_is_skipped_before_anything_is_sent(monkeypa
     record = response.decision
     assert record is not None and {INSTANT, DEEP} <= set(record.dropped or {}), "the budget dropped both modes"
     assert {INSTANT, DEEP} <= set(record.ignored or {}), "so the router's attempts named no candidate"
+
+
+def test_a_throttled_mode_cools_its_backend_so_the_next_call_runs_none_of_its_modes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = fake_backends(monkeypatch, 429)
+    with routed(INSTANT, DEEP, TAVILY) as wr:
+        wr.search("q")
+        response = wr.search("q")
+    assert (calls.exa, len(calls.tavily)) == (["instant"], 2), "the second call sent Exa nothing"
+    hops = {hop.id: hop.error for hop in (response.decision.hops if response.decision else None) or ()}
+    assert (hops[INSTANT], hops[DEEP]) == ("429", "backend_failed"), "refused while cooling, then stopped"
