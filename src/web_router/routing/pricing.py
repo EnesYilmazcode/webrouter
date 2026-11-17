@@ -41,8 +41,10 @@ from web_router.constants_budget import (
     UNKNOWN_PRICE,
 )
 from web_router.constants_modes import PART_SEP
-from web_router.prices_modes import mode_price
-from web_router.providers._pinning import split_pin
+from web_router.exceptions_typed import InvalidParameterError
+from web_router.modes import split_mode
+from web_router.prices_modes import declared, mode_price
+from web_router.providers._pinning import pinned_mode, split_pin
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
@@ -117,10 +119,13 @@ def priced_as(attempt: Attempt) -> tuple[str, str | None]:
     """The backend and mode ``attempt`` is priced at: a chain entry's pinned mode (``exa:exa-instant``) joins its."""
     provider, pinned = split_pin(attempt.provider)
     mode = attempt_mode(attempt)
-    if not pinned:
+    if not pinned or getattr(attempt.request, "mode", None):
         return provider, mode
-    parts = pinned.split(PART_SEP)
-    return provider, PART_SEP.join([*parts, mode] if mode and mode not in parts else parts)
+    try:
+        found = split_mode(provider, pinned.split(PART_SEP), declared(provider, attempt.tool))
+    except InvalidParameterError:
+        return provider, pinned  # a part the price list does not name: unpriced
+    return provider, pinned_mode(found, mode)
 
 
 def attempt_cost(attempt: Attempt) -> float | None:
