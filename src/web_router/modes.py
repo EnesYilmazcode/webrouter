@@ -3,7 +3,7 @@
 An id is ``tool:provider[:mode]`` or ``provider[:mode]``. A mode is up to three slots joined with ``+``, always in
 this order: a tier, a depth, then flags sorted. A slot left empty is the backend's default.
 
-- A **tier** (:class:`Tier`) writes fields depth never writes, so it combines with any depth.
+- A **tier** (:class:`Tier`) sets a vendor field (Exa's ``type``); a depth that writes the same field is refused.
 - The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``; ``low`` ... ``max`` for
   research), or a **content** (:class:`Content`), which replaces what depth sends and names the level it stands for.
 - A **flag** (:class:`Flag`) writes a field nothing else writes, so it combines with anything.
@@ -11,8 +11,8 @@ this order: a tier, a depth, then flags sorted. A slot left empty is the backend
 A vendor part is spelled with its provider's name first (``exa-instant``), so it can never be read as a normalized
 level, and the parser learns each part's slot from the provider's declarations. Input in any order comes out canonical
 (``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings parse for one release:
-``tavily:ultra-fast@deep`` and ``:ultra-fast``. Nothing merges a part's ``wire`` into a request yet: a mode
-is named and priced here, not sent.
+``tavily:ultra-fast@deep`` and ``:ultra-fast``. :mod:`web_router.providers._modes` merges a part's ``wire`` into
+the request a pinned id sends.
 """
 
 from __future__ import annotations

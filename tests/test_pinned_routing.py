@@ -14,7 +14,7 @@ from web_router.modes import Content, Flag, ModeDeclarations, Tier
 from web_router.providers._modes import offers
 from web_router.providers.auto import AutoProvider
 from web_router.routing.attempts import Attempt
-from web_router.routing.pricing import attempt_cost
+from web_router.routing.pricing import attempt_cost, priced_as
 from web_router.types import SearchRequest
 
 INSTANT = prices_modes.mode_price("exa", "search", "exa-instant")
@@ -51,6 +51,22 @@ def test_a_budget_charges_the_pinned_modes_price(monkeypatch: pytest.MonkeyPatch
 @pytest.mark.parametrize("entry", ["exa:exa-instant", "search:exa:exa-instant"])
 def test_a_chain_entry_that_pins_a_mode_is_priced_as_that_mode(entry: str) -> None:
     assert attempt_cost(Attempt(tool="search", provider=entry, request=SearchRequest(query="q"))) == INSTANT
+
+
+@pytest.mark.parametrize(
+    ("entry", "depth", "mode"),
+    [
+        ("exa:exa-highlights", "lite", "exa-highlights"),
+        ("you:you-full-page-cache", "deep", "you-full-page-cache"),
+        ("exa:exa-instant", "lite", "exa-instant+lite"),
+        ("brave:brave-extra-snippets", "lite", "lite+brave-extra-snippets"),
+    ],
+)
+def test_a_chain_entry_with_a_depth_is_priced_as_pinning_would_set_its_mode(entry: str, depth: str, mode: str) -> None:
+    attempt = Attempt(tool="search", provider=entry, request=SearchRequest(query="q", search_depth=depth))
+    backend = entry.split(":")[0]
+    assert priced_as(attempt) == (backend, mode)
+    assert attempt_cost(attempt) == prices_modes.mode_price(backend, "search", mode)  # as the same pin, called direct
 
 
 def test_a_pinned_backend_is_built_with_its_backends_config() -> None:

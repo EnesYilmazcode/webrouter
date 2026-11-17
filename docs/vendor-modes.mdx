@@ -38,8 +38,8 @@ router = WebRouter(
 An id is `provider[:mode]`, or `search:provider[:mode]` with the method named.
 A mode has up to three slots, joined with `+`, always in this order:
 
-1. a **tier**: a vendor setting no depth writes (Exa's `type`), so it combines
-   with any depth;
+1. a **tier**: a vendor setting (Exa's `type`). It combines with a depth unless
+   both write one field, as Tavily's tiers and depths both set `search_depth`;
 2. a **depth**: a normalized level (`lite`, `fast`, `deep`; `low` to `max` for
    an effort), or a **content**: a vendor setting that replaces what a depth
    sends (Exa's highlights instead of page text), standing for one level;
