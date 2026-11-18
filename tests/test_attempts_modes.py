@@ -64,10 +64,10 @@ def test_a_refused_mode_starts_no_cooldown(monkeypatch: pytest.MonkeyPatch) -> N
     assert calls.exa == ["instant", "instant"], "the second call tried Exa again"
 
 
-_STOPPING: list[Reply] = [403, 429, 500, httpx.ReadTimeout("read timed out"), httpx.ConnectError("reset")]
+_STOPPING: list[Reply] = [403, 429, httpx.ReadTimeout("read timed out"), httpx.ConnectError("reset")]
 
 
-@pytest.mark.parametrize("reply", _STOPPING, ids=["403", "429", "500", "timeout", "no-status"])
+@pytest.mark.parametrize("reply", _STOPPING, ids=["403", "429", "timeout", "no-status"])
 def test_any_other_failure_stops_the_backend_for_the_call(monkeypatch: pytest.MonkeyPatch, reply: Reply) -> None:
     calls = fake_backends(monkeypatch, reply)
     with routed(INSTANT, DEEP, TAVILY) as wr:

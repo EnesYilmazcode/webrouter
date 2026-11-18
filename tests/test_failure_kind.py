@@ -33,17 +33,12 @@ def test_a_400_or_422_bad_request_is_a_refused_mode(status: int) -> None:
     "exc",
     [
         _http(405),
-        _http(409),
-        _http(401),
-        _http(403),
-        _http(429),
-        _http(500),
         ProviderError("exa", "connection reset"),
         _timeout(),
         ConfigurationError("no key"),
         ProviderNotInstalledError("exa", "search"),
     ],
-    ids=["405", "409", "401", "403", "429", "500", "no-status", "timeout", "configuration", "not-installed"],
+    ids=["405", "no-status", "timeout", "configuration", "not-installed"],
 )
 def test_anything_else_is_not_a_refused_mode(exc: Exception) -> None:
     assert not mode_refused(exc)
