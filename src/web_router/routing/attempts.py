@@ -23,8 +23,8 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.constants_errors import MSG_KEY_REFUSED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.entry_names import split_entry
 from web_router.types import NormalizedRequest
 from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
 
@@ -135,8 +135,8 @@ def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple
     names = {name for _, name in eligible}
     ordered: list[tuple[int, str, str | None]] = []
     for entry in dict.fromkeys(route.order[tool]):
-        name, _, mode = (entry, "", "") if entry in names else entry.partition(CANDIDATE_ID_SEPARATOR)
-        ordered.extend((position, name, mode or None) for position, member in eligible if member == name)
+        name, mode = split_entry(entry, names)
+        ordered.extend((position, name, mode) for position, member in eligible if member == name)
     return ordered
 
 

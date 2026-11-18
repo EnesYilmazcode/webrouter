@@ -16,13 +16,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._chain import _RECOVERABLE, _nothing_started
 from web_router.providers._modes import PROBED
 from web_router.providers._pinning import _costed, pinned_request
 from web_router.routing.attempts import Attempt, admits, current_route, failed, noted, refunded
+from web_router.routing.entry_names import entry_name
 from web_router.routing.failure_kind import BackendStopped, mode_refused
 from web_router.types import SearchRequest
 
@@ -47,11 +47,6 @@ class Tried:
         self.held = response if self.held is None else self.held
 
 
-def label(name: str, mode: str | None) -> str:
-    """How failures and hooks name an attempt: its member, or ``member:mode`` in a vendor mode."""
-    return name if mode is None else f"{name}{CANDIDATE_ID_SEPARATOR}{mode}"
-
-
 def in_mode(member: Any, request: Any, mode: str | None) -> Any:
     """``request`` in ``mode`` for ``member``, the router's ``search_depth`` and ``effort`` replaced; with no mode,
     ``request`` itself."""
@@ -69,7 +64,7 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
     that cannot be built (a failure as any other), or the hook said no.
     """
     if position in tried.stopped:
-        noted(walk.tool, label(name, mode), BackendStopped(name))
+        noted(walk.tool, entry_name(name, mode), BackendStopped(name))
         return None
     attempt = Attempt(tool=walk.tool, provider=name, request=request, mode=mode)
     if mode is not None:
@@ -78,7 +73,7 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
                 tool=walk.tool, provider=name, request=in_mode(walk.member(position), request, mode), mode=mode
             )
         except InvalidParameterError as exc:  # the request sets what the mode writes: this mode only
-            failed(tried.failures, walk.tool, label(name, mode), exc)
+            failed(tried.failures, walk.tool, entry_name(name, mode), exc)
             return None
         except _RECOVERABLE as exc:
             failure(walk, tried, position, attempt, exc)
@@ -103,10 +98,10 @@ def failure(walk: Walk, tried: Tried, position: int, attempt: Attempt, exc: WebR
         refunded(attempt)
     else:
         tried.stopped.add(position)
-    failed(tried.failures, walk.tool, label(attempt.provider, attempt.mode), exc, walk.built.get(position))
+    failed(tried.failures, walk.tool, entry_name(attempt.provider, attempt.mode), exc, walk.built.get(position))
 
 
 def refused(walk: Walk, tried: Tried, attempt: Attempt, exc: WebRouterError) -> None:
     """Record an option ``attempt``'s member refused before sending, which does not count against it."""
     tried.refused.append(exc)
-    noted(walk.tool, label(attempt.provider, attempt.mode), exc)
+    noted(walk.tool, entry_name(attempt.provider, attempt.mode), exc)
