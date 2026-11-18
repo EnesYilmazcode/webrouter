@@ -23,7 +23,7 @@ from web_router.providers._modes import PROBED
 from web_router.providers._pinning import _costed, pinned_request
 from web_router.routing.attempts import Attempt, admits, current_route, failed, noted, refunded
 from web_router.routing.entry_names import entry_name
-from web_router.routing.failure_kind import BackendStopped, mode_refused
+from web_router.routing.failure_kind import BACKEND_FAILED, mode_refused
 from web_router.types import SearchRequest
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
     that cannot be built (a failure as any other), or the hook said no.
     """
     if position in tried.stopped:
-        noted(walk.tool, entry_name(name, mode), BackendStopped(name))
+        noted(walk.tool, entry_name(name, mode), BACKEND_FAILED)
         return None
     attempt = Attempt(tool=walk.tool, provider=name, request=request, mode=mode)
     if mode is not None:
