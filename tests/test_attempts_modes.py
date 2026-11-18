@@ -144,3 +144,10 @@ def test_a_router_answer_that_leaves_nothing_to_run_lets_the_budget_say_why(monk
     with wr, pytest.raises(BudgetExceededError, match="search:exa skipped"):
         wr.search("q", budget=Budget(max_cost_usd=0.015))
     assert router.ids and calls.exa == [], "asked, since a mode fits; then nothing sent"
+
+
+def test_a_cap_of_nothing_sends_nothing_and_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch)
+    with routed(INSTANT, DEEP, TAVILY) as wr, pytest.raises(BudgetExceededError):
+        wr.search("q", budget=Budget(max_cost_usd=0.0))
+    assert (calls.exa, calls.tavily) == ([], [])
