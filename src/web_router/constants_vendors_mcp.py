@@ -46,7 +46,7 @@ MCP_CALL_VENDOR_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     "params": {
         "type": "object",
-        "description": "The endpoint's own inputs, named as vendor_endpoint lists them. An undeclared one is refused.",
+        "description": "The endpoint's own inputs, as data_api_endpoint lists them. An undeclared one is refused.",
     },
     "vendor": {"type": "string", "description": "For a raw call: the vendor's slug."},
     "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "description": "For a raw call."},
