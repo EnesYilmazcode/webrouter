@@ -69,12 +69,8 @@ class Budget:
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
 
     def __post_init__(self) -> None:
-        """
-        Raises:
-            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
-                more -- negative, text, a bool, NaN,
-                infinity, or too large for a float: it would cap nothing or everything, or fail later.
-        """
+        """Raise :class:`InvalidParameterError`, a :class:`ValueError`, for a cap that is not a finite number of 0 or
+        more -- negative, text, a bool, NaN, infinity, or too large for a float: it would cap nothing or everything."""
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
