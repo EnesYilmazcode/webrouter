@@ -329,6 +329,12 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_mode_parts.py each search backend's declared tiers, contents and
 │                       flags, and the wire each sends
+├── constants_mode_parts_extract.py the same for each extract backend: tiers
+│                       and flags, which never write the URLs
+├── constants_mode_parts_answer.py the same for each answer backend: tiers,
+│                       which never write the question
+├── constants_mode_parts_browse.py the same for each browse backend: tiers,
+│                       which never write the task or start_url
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an
@@ -669,6 +675,9 @@ unit test holds the schemas to it. OpenAI's tool output has no error flag, so
 every error the model reads says in its text that the call failed or did not
 run. Add research or browse to them only with a routing-guide paragraph saying
 when each is worth its bill.
+
+Benchmark quirks (rate tiers, no resume, combining scans):
+`.claude/skills/running-webrouter-benchmarks/SKILL.md`.
 
 `benchmarks/agent/` is a consumer of the library, like `examples/`: it
 drives Claude agents on Managed Agents through the Claude tools, OpenAI
@@ -1204,8 +1213,9 @@ lossy.
 
 **Never let a credential follow a redirect.** `_HttpProvider` pins
 `follow_redirects=False` and refuses `follow_redirects=True` on a provider that
-sends a key. `httpx` replays request headers to the redirect target without
-stripping them cross-host, so following one hands that host the key. Do not
+sends a key. On a cross-host redirect `httpx` drops a standard `Authorization`
+header but keeps a custom one such as `X-API-Key`, so following one hands that
+host any key sent that way. Do not
 "simplify" this by dropping the pin and relying on the `httpx` default, and do
 not relax the refusal. A provider with an unusual auth scheme overrides
 `_auth_headers` rather than building the header itself, so it cannot opt out of
