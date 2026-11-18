@@ -44,6 +44,13 @@ def set_keys(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
             monkeypatch.setenv(search_var, "test-key")
 
 
+@pytest.fixture(name="keys")
+def exa_tavily_fixture(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """Exa and Tavily keyed with test keys, nothing else."""
+    set_keys(clear_keys(monkeypatch), "exa", "tavily")
+    return monkeypatch
+
+
 def ids(found: CandidateSet, tool: str | None = None) -> list[str]:
     """The ids of the candidates found, in order, for ``tool`` alone when given."""
     return [c.id for c in found.candidates if tool is None or c.tool == tool]

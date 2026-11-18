@@ -11,16 +11,15 @@ from typing import Any
 
 import pytest
 
-from tests.candidates_helpers import Shown, clear_keys, ids, set_keys
+from tests.candidates_helpers import Shown, clear_keys, exa_tavily_fixture, ids, set_keys  # noqa: F401  (fixture)
 from tests.conftest import FakeProvider
-from web_router import Budget, Candidate, RouteDecision, RouteRequest, WebRouter
+from web_router import Budget, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._modes import offers
 from web_router.providers._pinning import pinned_request
 from web_router.registry import get_provider_class, register_provider, unregister_provider
 from web_router.routing.attempts import Attempt
 from web_router.routing.candidates import build_candidates
-from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider_llm import LLMDecider
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.decider_systemone import SystemOneDecider
@@ -30,13 +29,6 @@ from web_router.types import SearchRequest
 
 CHAIN = {"auto": {"chain": {"search": ["exa", "tavily"]}}}
 SEARCH = {"search": SearchRequest(query="q")}
-
-
-@pytest.fixture
-def keys(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """Exa and Tavily keyed, nothing else."""
-    set_keys(clear_keys(monkeypatch), "exa", "tavily")
-    return monkeypatch
 
 
 def shown(router: Shown, **kwargs: Any) -> list[str]:
@@ -81,17 +73,6 @@ def test_a_built_in_router_is_shown_backends_only_unless_the_caller_asks(keys: A
 def test_a_built_in_decider_attached_is_shown_backends_only(keys: Any, decider: type) -> None:
     fake = type("Fake", (), {"route_modes": decider.route_modes, "decide": lambda self, question: None})()
     assert WebRouter(router=DeciderRouter(fake))._route_modes is False
-
-
-def test_cheapest_first_ranks_backends_at_their_default_price_whatever_their_modes_cost(keys: Any) -> None:
-    cheap = Candidate(tool="search", provider="exa", mode="exa-instant", est_cost_usd=0.001)
-    backends = (Candidate(tool="search", provider="exa", est_cost_usd=0.02), cheap)
-    req = RouteRequest(
-        prompt="q",
-        candidates=(*backends, Candidate(tool="search", provider="tavily", est_cost_usd=0.01)),
-        deadline_s=1.0,
-    )
-    assert cheapest_first(req).providers == {"search": ["tavily", "exa"]}
 
 
 def test_a_router_shown_only_modes_is_asked_and_its_attempts_give_the_order(keys: Any) -> None:

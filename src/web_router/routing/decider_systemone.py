@@ -46,7 +46,7 @@ class SystemOneDecider:
     """Asks a System One API one ``choice`` question per routed call, never retried."""
 
     route_modes = False
-    """Shown backends only: its question leaves vendor modes out even under a caller's ``route_modes=True``."""
+    """Shown backends only until modes are on by default; a caller's ``route_modes=True`` shows it each mode too."""
 
     def __init__(
         self,
