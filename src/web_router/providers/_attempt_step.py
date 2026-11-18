@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.exceptions import WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.providers._chain import _RECOVERABLE, _nothing_started
+from web_router.providers._chain import RECOVERABLE, nothing_started
 from web_router.providers._modes import PROBED
-from web_router.providers._pinning import _costed, pinned_request
+from web_router.providers._pinning import costed, pinned_request
 from web_router.routing.attempts import Attempt, admits, current_route, failed, noted, refunded
 from web_router.routing.entry_names import entry_name
 from web_router.routing.failure_kind import BACKEND_FAILED, mode_refused
@@ -72,7 +72,7 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
         except InvalidParameterError as exc:  # the request sets what the mode writes: this mode only
             failed(tried.failures, walk.tool, entry_name(name, mode), exc)
             return None
-        except _RECOVERABLE as exc:
+        except RECOVERABLE as exc:
             failure(walk, tried, position, exc, name, mode)
             return None
     attempt = Attempt(tool=walk.tool, provider=name, request=request, mode=mode)
@@ -82,7 +82,7 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
 def priced(response: Any, member: Any, attempt: Attempt) -> Any:
     """``response`` carrying its mode's estimated price when it states none; any other answer as it is."""
     request = attempt.request
-    return _costed(response, member, request) if attempt.mode and isinstance(request, SearchRequest) else response
+    return costed(response, member, request) if attempt.mode and isinstance(request, SearchRequest) else response
 
 
 def failure(
@@ -98,7 +98,7 @@ def failure(
 
     A mode the backend refused, ``sent``, is taken back; any other failure stops the backend at ``position``.
     """
-    if not walk.hops and not _nothing_started(exc):
+    if not walk.hops and not nothing_started(exc):
         raise exc
     if sent is not None and sent.mode is not None and mode_refused(exc):
         refunded(sent)

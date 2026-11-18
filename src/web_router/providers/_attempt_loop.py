@@ -35,7 +35,7 @@ from web_router.constants import AUTO_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._attempt_step import Failures, Tried, failure, prepared, priced, refused
-from web_router.providers._chain import _RECOVERABLE, _held_or_raise
+from web_router.providers._chain import RECOVERABLE, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
 from web_router.routing.attempts import in_call_order
@@ -130,7 +130,7 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
         except walk.refusals as exc:
             refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
+        except RECOVERABLE as exc:
             failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
@@ -155,7 +155,7 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
         except walk.refusals as exc:
             refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
+        except RECOVERABLE as exc:
             failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
