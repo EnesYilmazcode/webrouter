@@ -39,6 +39,7 @@ from web_router.constants_merge import (
     LAST_RESORT_TOOL,
     MSG_EXCLUDE_NO_REASON,
     MSG_EXCLUSIONS_EMPTY,
+    MSG_MODE_NOT_RUN,
     MSG_TOOL_NO_CANDIDATE,
     MSG_UNKNOWN_ID,
     MSG_UNKNOWN_TOOL,
@@ -60,8 +61,11 @@ __all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge"]
 def _order(
     tool: str, request: RouteRequest, ranked: Sequence[str], excluded: Collection[str], static: Mapping[Any, Any]
 ) -> tuple[str, ...]:
-    """``ranked`` first, then the static order, then any candidate the static order leaves out; none excluded."""
-    names = [c.provider for c in request.candidates if c.tool == tool and c.id not in excluded]
+    """``ranked`` first, then the static order, then any candidate the static order leaves out; none excluded.
+
+    Backends only: a vendor mode candidate is not run by name, so its backend is ordered only by its own candidate.
+    """
+    names = [c.provider for c in request.candidates if c.tool == tool and c.is_backend and c.id not in excluded]
     pool = set(names)
     return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
 
@@ -91,7 +95,7 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
     """Rule 1: the pinned method; else the router's first with a candidate left; else ``search``."""
     if request.pinned_tool is not None:
         return request.pinned_tool
-    left = {c.tool for c in request.candidates if c.id not in excluded}
+    left = {c.tool for c in request.candidates if c.is_backend and c.id not in excluded}  # a backend to run
     for tool in decision.tools or ():
         if tool not in TOOLS:
             ignored[tool] = MSG_UNKNOWN_TOOL.format(tool=tool)
@@ -102,15 +106,16 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
     return LAST_RESORT_TOOL
 
 
-def _ranked(tool: str, decision: RouteDecision, known: Collection[str], ignored: dict[str, str]) -> tuple[str, ...]:
-    """The router's backends for ``tool``, best first; an unknown one noted and left out."""
+def _ranked(tool: str, decision: RouteDecision, known: Mapping[str, bool], ignored: dict[str, str]) -> tuple[str, ...]:
+    """The router's backends for ``tool``, best first; an unknown one, or a vendor mode's id, noted and left out."""
     asked: Mapping[Any, Sequence[str]] = decision.providers or {}
     ranked = []
     for provider in dict.fromkeys(asked.get(tool, ())):
-        if candidate_id(tool, provider) in known:
+        cid = candidate_id(tool, provider)
+        if known.get(cid):  # a backend: a vendor mode is not run by name
             ranked.append(provider)
         else:
-            ignored[candidate_id(tool, provider)] = MSG_UNKNOWN_ID.format(id=candidate_id(tool, provider))
+            ignored[cid] = (MSG_MODE_NOT_RUN if cid in known else MSG_UNKNOWN_ID).format(id=cid)
     return tuple(ranked)
 
 
@@ -160,7 +165,7 @@ def merge(
     decision = cast(RouteDecision, decision)
     if decides_nothing(decision):
         return _static(request, static_order, None, decision.reason)
-    known = {c.id for c in request.candidates}
+    known = {c.id: c.is_backend for c in request.candidates}
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
     asked = _tool(request, decision, excluded, ignored)

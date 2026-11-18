@@ -117,6 +117,7 @@ class DeciderRouter:
         self.timeout_s = _declared_timeout(decider)
         self.router_name = _decider_name(decider)
         self.route_tools = getattr(decider, "route_tools", None)
+        self.route_modes = getattr(decider, "route_modes", None)
         if callable(self._decide) and not inspect.iscoroutinefunction(self._decide):
             self.route = self._route
 

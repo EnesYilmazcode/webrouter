@@ -41,6 +41,7 @@ from web_router.routing.invoke import RouterOutcome
 from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
+from web_router.routing.request_modes import runnable
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.routing.url_policy import screened
 from web_router.types import (
@@ -73,7 +74,7 @@ class _Planner(RouterSetup):
             requests["extract"] = ExtractRequest(urls=[ONE_PAGE_URL])
         if tool is not None:
             requests = {tool: requests[tool]} if tool in requests else {}
-        found = build_candidates(self, requests, budget=budget)
+        found = build_candidates(self, requests, budget=budget, modes=self._route_modes)
         deadline = 0.0 if self._router is None else self._router.deadline(budget)
         req = RouteRequest(
             prompt=prompt,
@@ -102,7 +103,7 @@ class _Planner(RouterSetup):
         )
 
     def _asks(self, req: RouteRequest) -> bool:
-        return self._router is not None and bool(req.candidates)
+        return self._router is not None and runnable(req.candidates)
 
     def _run_scope(self, stack: ExitStack, plan: Plan, budget: Budget | None) -> tuple[Any, NormalizedRequest, Any]:
         """The ``auto`` the plan runs on, its request, and the budget's scope, entered with the plan's order."""

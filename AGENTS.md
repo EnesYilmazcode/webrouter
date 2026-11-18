@@ -264,7 +264,7 @@ src/web_router/
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
 │   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
-│   │                   the router's own, else all five; read once
+│   │                   the router's own, else all five; read once; route_modes likewise
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
@@ -278,6 +278,10 @@ src/web_router/
 │   │                   chains can serve, priced, timed and prefiltered by the budget
 │   ├── candidates_priced.py one method's members priced, timed, and dropped when the
 │   │                   budget leaves them out
+│   ├── candidate_modes.py mode_requests(): a member's vendor modes as candidates, each
+│   │                   on its own request, refused ones dropped (route_modes)
+│   ├── request_modes.py backends_only() for a router that did not opt in to modes;
+│   │                   within(): a remote request held to 64 candidates
 │   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
 │   │                   before its candidates are priced or a router is asked; a call
 │   │                   no router orders runs at it too
