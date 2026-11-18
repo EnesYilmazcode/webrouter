@@ -210,10 +210,15 @@ src/web_router/
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
+│   ├── entry_names.py  a candidate named without its method (`exa:exa-instant`):
+│   │                   entry_name() builds one, split_entry() reads one
 │   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
+│   ├── budget_hooks.py the ledgers in flight, and a ledger's answer and refund hooks
+│   ├── failure_kind.py mode_refused(): what a vendor mode's failure means for the
+│   │                   backend's other modes, refused or the backend stopped
 │   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
 │   │                   the spend, the position that ran
 │   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
@@ -290,6 +295,8 @@ src/web_router/
 │   ├── merge.py        merge(): a router's decision and the static order made into
 │   │                   one method, one order and checked options, pure
 │   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
+│   ├── merge_attempts.py a decision's attempts: candidate ids, vendor modes included,
+│   │                   as entries in the merged order, and exclusions that reach modes
 │   ├── merge_shape.py  whether a router's answer is a well-formed decision that
 │   │                   decides something
 │   ├── merge_params.py the merge's check on a router's options: allowlist, values,
@@ -438,6 +445,8 @@ src/web_router/
     │                   answer it holds, else the deadline naming each reason
     ├── _attempt_loop.py the one loop every auto chain walks, sync and async: the hook
     │                   before each member, hop or job submit, failures, empty answers held
+    ├── _attempt_step.py one attempt of that walk: its request in its vendor mode, its
+    │                   price, and a failure's outcome (refund, stop the backend, raise)
     ├── _auto_extract.py which members of extract `auto` can serve a request: the
     │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and

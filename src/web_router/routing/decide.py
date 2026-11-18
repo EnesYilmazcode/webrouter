@@ -17,6 +17,7 @@ from typing import Any, cast
 
 from web_router._urls import shown
 from web_router.constants_merge import ROUTER_TIMEOUT
+from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.composite import members_of, none_answered
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
@@ -56,8 +57,14 @@ def _base_order(found: CandidateSet, decision: object) -> dict[ToolName, list[st
     under a cost cap runs cheapest first as an unrouted call does; a router's own ranking is kept as it gave it.
     """
     order = static_order(found)
-    ranked: Mapping[Any, Any] = getattr(decision, "providers", None) or {}
-    order.update({tool: list(names) for tool, names in found.cost_order.items() if not ranked.get(tool)})
+    providers: Mapping[Any, Any] = getattr(decision, "providers", None) or {}
+    attempts = getattr(decision, "attempts", None)
+    # Set, a decision's attempts replace its providers: a method they name a candidate of is ranked.
+    if attempts:
+        ranked = {c.tool for c in found.candidates if c.id in attempts}
+    else:
+        ranked = {t for t, n in providers.items() if n}
+    order.update({tool: list(names) for tool, names in found.cost_order.items() if tool not in ranked})
     return order
 
 
@@ -111,3 +118,8 @@ def decided(
         **fields,
     )
     return Decided(tool=merged.tool, providers=merged.providers, params=params, record=out)
+
+
+def router_set(record: DecisionRecord) -> frozenset[str]:
+    """The options a router set, by the record a plan carries: an attempt's vendor mode replaces some of them."""
+    return frozenset(record.params or ()) if record.params_source == PARAMS_SOURCE_ROUTER else frozenset()

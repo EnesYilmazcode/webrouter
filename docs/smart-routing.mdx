@@ -45,7 +45,8 @@ time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
 what it sends elsewhere is up to your code. With no router attached, nothing
 extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
-`exclude`, `params`, `confidence` and `reason`. A router gets 50 ms unless it
+`attempts` (candidate ids, best first, which replace both, a
+[vendor mode](/vendor-modes#a-router-picks-modes) included), `exclude`, `params`, `confidence` and `reason`. A router gets 50 ms unless it
 sets a `timeout_s` attribute. One that raises, runs out of time or answers
 something else leaves the static order -- `auto`'s, as in
 [Working with no credentials](/providers#working-with-no-credentials) --
@@ -148,8 +149,8 @@ web_router import DecisionRecord`) on every routed or budgeted call, and
   `ignored`, what it excluded and what of its answer was set aside, including
   picks the budget had removed;
 - `merged`, the order tried; `ran`, the position in it that answered;
-  `attempts`, each try with `est_cost_usd` and `seconds`; `hops`, each
-  candidate moved past and why;
+  `attempts`, each try with `est_cost_usd`, `seconds` and, in a vendor mode,
+  `mode`; `hops`, each candidate moved past and why;
 - `params`, `params_source` and `params_reason`, the options set and who set
   them;
 - `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`;
@@ -266,6 +267,7 @@ field may be left out or `null`):
       "jina"
     ]
   },
+  "attempts": null,
   "exclude": {
     "search:tavily": "the prompt names a URL"
   },
@@ -483,4 +485,4 @@ The price list every candidate is priced from is `web_router.prices`: see
 A candidate is a backend at its default mode. A backend's own tiers and
 add-ons (Exa's `instant` search type, Brave's extra snippets) are
 [vendor modes](/vendor-modes): you can pin one with `provider="exa:exa-instant"`,
-but a router does not pick modes yet.
+and a router shown them can pick them with `attempts`.

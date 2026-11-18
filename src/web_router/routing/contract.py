@@ -16,6 +16,7 @@ from pydantic import ConfigDict
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
 from web_router.exceptions_typed import InvalidParameterError
+from web_router.routing.entry_names import entry_name
 from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -29,8 +30,7 @@ _WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
 def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
     """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
     mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
-    base = f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
-    return base if mode is None else f"{base}{CANDIDATE_ID_SEPARATOR}{mode}"
+    return f"{tool}{CANDIDATE_ID_SEPARATOR}{entry_name(provider, mode)}"
 
 
 def _finite_cap(value: object) -> bool:
@@ -69,12 +69,8 @@ class Budget:
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
 
     def __post_init__(self) -> None:
-        """
-        Raises:
-            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
-                more -- negative, text, a bool, NaN,
-                infinity, or too large for a float: it would cap nothing or everything, or fail later.
-        """
+        """Raise :class:`InvalidParameterError`, a :class:`ValueError`, for a cap that is not a finite number of 0 or
+        more -- negative, text, a bool, NaN, infinity, or too large for a float: it would cap nothing or everything."""
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
@@ -161,6 +157,9 @@ class RouteDecision:
 
     providers: Mapping[ToolName, Sequence[str]] | None = None
     """Per method, the backends to try, best first."""
+
+    attempts: Sequence[str] | None = None
+    """Candidate ids to try, best first, vendor modes included; non-empty, they replace ``tools`` and ``providers``."""
 
     exclude: Mapping[str, str] = field(default_factory=dict)
     """Candidates never to try, by id, each with the reason."""

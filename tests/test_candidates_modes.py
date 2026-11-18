@@ -94,12 +94,13 @@ def test_cheapest_first_ranks_backends_at_their_default_price_whatever_their_mod
     assert cheapest_first(req).providers == {"search": ["tavily", "exa"]}
 
 
-def test_a_router_shown_only_modes_is_not_asked(keys: Any) -> None:
-    router, cap = Shown(), Budget(max_cost_usd=0.015)  # Exa's default is over it, its instant mode is not
+def test_a_router_shown_only_modes_is_asked_and_its_attempts_give_the_order(keys: Any) -> None:
+    router, cap = Shown(RouteDecision(attempts=["search:exa:exa-instant"])), Budget(max_cost_usd=0.015)
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router, route_modes=True) as wr:
         found = build_candidates(wr, SEARCH, budget=cap, modes=True)
-        wr.plan("q", tool="search", budget=cap)
-    assert ids(found) == ["search:exa:exa-instant"] and router.reqs == []
+        plan = wr.plan("q", tool="search", budget=cap)
+    assert ids(found) == ["search:exa:exa-instant"], "Exa's default is over the cap, its instant mode is not"
+    assert router.ids == ids(found) and plan.providers["search"] == ("exa:exa-instant",)
 
 
 def test_a_route_modes_that_is_not_a_bool_is_refused(keys: Any) -> None:

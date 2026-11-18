@@ -35,7 +35,7 @@ from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
-from web_router.routing.decide import decided
+from web_router.routing.decide import decided, router_set
 from web_router.routing.eligible import budget_dropped
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.metered import metered
@@ -132,7 +132,8 @@ def _ordered(stack: ExitStack, plan: Plan) -> None:
         return
     if not providers and (skipped := budget_dropped(plan)):
         raise BudgetExceededError(skipped)
-    stack.enter_context(in_route(CallRoute(order={plan.tool: list(providers)})))
+    route = CallRoute(order={plan.tool: list(providers)}, router_params=router_set(plan.decision))
+    stack.enter_context(in_route(route))
 
 
 def _settled(response: Any, plan: Plan) -> Any:

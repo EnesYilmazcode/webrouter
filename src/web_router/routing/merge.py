@@ -10,7 +10,10 @@ exactly as a routed call would run it. The rules:
    first of ``decision.tools`` that still has a candidate; else ``search``.
    It is chosen once: a fallback never moves to another method.
 2. **Order.** The backends the router ranked for that method, in its order,
-   then every other candidate in the static order.
+   then every other candidate in the static order. A decision's ``attempts``,
+   when set, replace ``tools`` and ``providers``: the method is the first
+   attempt's, and its attempts, vendor modes included, rank it
+   (:mod:`.merge_attempts`).
 3. **Exclusions.** Only ``decision.exclude`` removes a candidate, each with
    its reason; one with an empty reason is set aside and noted. Exclusions
    that would leave the method no backend are ignored.
@@ -48,6 +51,7 @@ from web_router.constants_merge import (
 )
 from web_router.routing.composite import decides_nothing
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
+from web_router.routing.merge_attempts import backends, entries, first_tool, ranked_attempts
 from web_router.routing.merge_extract import extract_or_search, lost_its_urls, prompt_request
 from web_router.routing.merge_params import checked_params
 from web_router.routing.merge_shape import TOOLS, well_formed
@@ -61,12 +65,12 @@ __all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge"]
 def _order(
     tool: str, request: RouteRequest, ranked: Sequence[str], excluded: Collection[str], static: Mapping[Any, Any]
 ) -> tuple[str, ...]:
-    """``ranked`` first, then the static order, then any candidate the static order leaves out; none excluded.
+    """``ranked`` first, then the static order, then any backend the static order leaves out; none excluded.
 
-    Backends only: a vendor mode candidate is not run by name, so its backend is ordered only by its own candidate.
+    A vendor mode runs only where ``ranked`` names it: the static order names backends alone.
     """
-    names = [c.provider for c in request.candidates if c.tool == tool and c.is_backend and c.id not in excluded]
-    pool = set(names)
+    pool = entries(request, tool, excluded)
+    names = [name for name, candidate in pool.items() if candidate.is_backend]
     return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
 
 
@@ -95,6 +99,8 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
     """Rule 1: the pinned method; else the router's first with a candidate left; else ``search``."""
     if request.pinned_tool is not None:
         return request.pinned_tool
+    if decision.attempts:
+        return first_tool(request, decision, excluded) or LAST_RESORT_TOOL
     left = {c.tool for c in request.candidates if c.is_backend and c.id not in excluded}  # a backend to run
     for tool in decision.tools or ():
         if tool not in TOOLS:
@@ -106,8 +112,13 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
     return LAST_RESORT_TOOL
 
 
-def _ranked(tool: str, decision: RouteDecision, known: Mapping[str, bool], ignored: dict[str, str]) -> tuple[str, ...]:
-    """The router's backends for ``tool``, best first; an unknown one, or a vendor mode's id, noted and left out."""
+def _ranked(
+    tool: str, request: RouteRequest, decision: RouteDecision, known: Mapping[str, bool], ignored: dict[str, str]
+) -> tuple[str, ...]:
+    """The router's backends for ``tool``, best first, or its attempts when set; an unknown id, or a vendor mode's
+    id ranked as a backend, noted and left out."""
+    if decision.attempts:
+        return ranked_attempts(tool, request, decision, ignored)
     asked: Mapping[Any, Sequence[str]] = decision.providers or {}
     ranked = []
     for provider in dict.fromkeys(asked.get(tool, ())):
@@ -171,10 +182,12 @@ def merge(
     asked = _tool(request, decision, excluded, ignored)
     tool = cast(ToolName, extract_or_search(asked, request, decision, caller_set, url_check, ignored))
     while True:  # at most twice: an extract that lost its URLs to the checks runs once more as search
-        ranked = _ranked(tool, decision, known, ignored)
+        ranked = _ranked(tool, request, decision, known, ignored)
         providers, kept = _never_empty(tool, request, ranked, excluded, static_order, ignored)
         base = (requests or {}).get(tool) or prompt_request(tool, request)
-        params = checked_params(tool, decision, providers, base, request.budget, caller_set, url_check, ignored)
+        params = checked_params(
+            tool, decision, backends(request, tool, providers), base, request.budget, caller_set, url_check, ignored
+        )
         if not lost_its_urls(tool, request, params, ignored):
             return settled(tool, ranked, providers, kept, params, ignored, decision.reason)
         tool = LAST_RESORT_TOOL
