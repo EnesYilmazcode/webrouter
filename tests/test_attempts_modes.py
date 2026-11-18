@@ -13,7 +13,7 @@ import pytest
 
 from tests.attempts_helpers import DEEP, INSTANT, TAVILY, Reply, fake_backends, hooked, price, routed
 from tests.candidates_helpers import Shown
-from web_router import AsyncWebRouter, Budget, ProviderError, RouteDecision, WebRouter
+from web_router import AsyncWebRouter, Budget, BudgetExceededError, ProviderError, RouteDecision, WebRouter
 from web_router.routing.attempts import CallRoute, call_route
 
 EMPTY: dict[str, Any] = {"results": []}
@@ -135,3 +135,12 @@ def test_a_cap_only_a_mode_fits_still_asks_the_router_and_runs_that_mode(monkeyp
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router) as wr:
         response = wr.search("q", budget=cap)
     assert (router.ids, calls.exa, response.provider) == ([INSTANT], ["instant"], "exa")
+
+
+def test_a_router_answer_that_leaves_nothing_to_run_lets_the_budget_say_why(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch)
+    router = Shown(RouteDecision(providers={"search": ["exa"]}), route_modes=True)
+    wr = WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router)
+    with wr, pytest.raises(BudgetExceededError, match="search:exa skipped"):
+        wr.search("q", budget=Budget(max_cost_usd=0.015))
+    assert router.ids and calls.exa == [], "asked, since a mode fits; then nothing sent"
