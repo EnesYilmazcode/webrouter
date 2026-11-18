@@ -40,7 +40,8 @@ class Tried:
     refused: list[WebRouterError] = field(default_factory=list)
     held: Any = None
     stopped: set[int] = field(default_factory=set)
-    """The chain positions whose backend failed in this call: their later attempts are passed over."""
+    """The chain positions whose backend failed in this call: that position's later attempts are passed over, while
+    another position of the same backend (a keyed entry after a keyless one) still runs."""
 
     def hold(self, response: object) -> None:
         # Not `held or response`: an empty response is falsy, having no length.
