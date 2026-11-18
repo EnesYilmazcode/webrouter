@@ -131,7 +131,7 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
             refused(walk, tried, attempt, exc)
             continue
         except _RECOVERABLE as exc:
-            failure(walk, tried, position, attempt, exc)
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])
@@ -156,7 +156,7 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             refused(walk, tried, attempt, exc)
             continue
         except _RECOVERABLE as exc:
-            failure(walk, tried, position, attempt, exc)
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])

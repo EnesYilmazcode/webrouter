@@ -66,18 +66,16 @@ def prepared(walk: Walk, tried: Tried, position: int, name: str, mode: str | Non
     if position in tried.stopped:
         noted(walk.tool, entry_name(name, mode), BACKEND_FAILED)
         return None
-    attempt = Attempt(tool=walk.tool, provider=name, request=request, mode=mode)
     if mode is not None:
         try:
-            attempt = Attempt(
-                tool=walk.tool, provider=name, request=in_mode(walk.member(position), request, mode), mode=mode
-            )
+            request = in_mode(walk.member(position), request, mode)
         except InvalidParameterError as exc:  # the request sets what the mode writes: this mode only
             failed(tried.failures, walk.tool, entry_name(name, mode), exc)
             return None
         except _RECOVERABLE as exc:
-            failure(walk, tried, position, attempt, exc)
+            failure(walk, tried, position, exc, name, mode)
             return None
+    attempt = Attempt(tool=walk.tool, provider=name, request=request, mode=mode)
     return attempt if admits(attempt) else None
 
 
@@ -87,18 +85,26 @@ def priced(response: Any, member: Any, attempt: Attempt) -> Any:
     return _costed(response, member, request) if attempt.mode and isinstance(request, SearchRequest) else response
 
 
-def failure(walk: Walk, tried: Tried, position: int, attempt: Attempt, exc: WebRouterError) -> None:
-    """Record ``attempt``'s failure and move on; raise it when moving on could bill twice or would not help.
+def failure(
+    walk: Walk,
+    tried: Tried,
+    position: int,
+    exc: WebRouterError,
+    name: str,
+    mode: str | None,
+    sent: Attempt | None = None,
+) -> None:
+    """Record ``name``'s failure in ``mode`` and move on; raise it when moving on could bill twice or would not help.
 
-    A refused mode is taken back; any other failure stops the backend at ``position`` for the call.
+    A mode the backend refused, ``sent``, is taken back; any other failure stops the backend at ``position``.
     """
     if not walk.hops and not _nothing_started(exc):
         raise exc
-    if attempt.mode is not None and mode_refused(exc):
-        refunded(attempt)
+    if sent is not None and sent.mode is not None and mode_refused(exc):
+        refunded(sent)
     else:
         tried.stopped.add(position)
-    failed(tried.failures, walk.tool, entry_name(attempt.provider, attempt.mode), exc, walk.built.get(position))
+    failed(tried.failures, walk.tool, entry_name(name, mode), exc, walk.built.get(position))
 
 
 def refused(walk: Walk, tried: Tried, attempt: Attempt, exc: WebRouterError) -> None:
