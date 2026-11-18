@@ -109,10 +109,13 @@ class Candidate:
 
     def __post_init__(self) -> None:
         expected = candidate_id(self.tool, self.provider, self.mode)
-        if not self.id:
-            object.__setattr__(self, "id", expected)
-        elif self.id != expected:
+        if self.id not in ("", expected):
             raise ValueError(MSG_CANDIDATE_ID.format(id=self.id, expected=expected))
+        object.__setattr__(self, "id", expected)
+
+    @property
+    def is_backend(self) -> bool:  # a backend at its default mode, the one a call runs; not a vendor mode
+        return self.mode is None
 
 
 @dataclass(frozen=True, kw_only=True)
