@@ -34,6 +34,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 
+### Fixed
+
+- `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
+
 ## [0.14.0] - 2026-11-19
 
 ### Added
