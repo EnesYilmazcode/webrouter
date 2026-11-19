@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- Vendor catalog: SignalHire, BetterContact, SalesQL, Event Registry (NewsAPI.ai) and Tomorrow.io, with 34 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 377 vendors and 2,739 endpoints.
+
+### Changed
+
+- Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
+
 ## [0.14.0] - 2026-11-19
 
 ### Added
