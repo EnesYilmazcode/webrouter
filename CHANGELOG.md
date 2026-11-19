@@ -37,6 +37,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
+- Under `auto`, an extract that retried a failed URL on a later backend could return its documents out of the order asked for. A page the first backend echoed under the URL it resolved to was sorted after the retried pages: Nimble and Keenable echo a slash added to a bare host, a redirect followed and a fragment dropped, and Jina the added slash. Each page now sorts by the URL it answers, so the documents come back in the order asked, as the Extract guide says.
 
 ## [0.14.0] - 2026-11-19
 
