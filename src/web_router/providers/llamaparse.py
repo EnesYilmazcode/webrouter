@@ -14,7 +14,9 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from pathlib import PurePosixPath
 from typing import Any, ClassVar
+from urllib.parse import urlsplit
 
 from web_router.constants import ENV_LLAMA_CLOUD_API_KEY, PROVIDER_LLAMAPARSE
 from web_router.constants_llamaparse import (
@@ -32,6 +34,7 @@ from web_router.constants_llamaparse import (
     LLAMAPARSE_VERSION,
     LLAMAPARSE_WAIT_SECONDS,
     MSG_LLAMAPARSE_FAILED,
+    MSG_LLAMAPARSE_JOB_ERROR,
     MSG_LLAMAPARSE_NO_JOB,
     MSG_LLAMAPARSE_STILL_RUNNING,
 )
@@ -81,10 +84,23 @@ class LlamaParseExtractProvider(_HttpProvider, ExtractProvider):
         return build_payload(request, tier=LLAMAPARSE_TIER, version=LLAMAPARSE_VERSION, **fixed)
 
     def _upload(self, request: ExtractRequest, url: str, data: bytes) -> dict[str, Any]:
-        name = url.rsplit("/", 1)[-1] or "document"
+        # The path's last segment only: a signed URL's query holds its token, and LlamaCloud needs no URL here.
+        name = PurePosixPath(urlsplit(url).path).name or "document"
         return {"files": {"file": (name, data)}, "data": {"configuration": json.dumps(self._job_fields(request))}}
 
     def _waited(self, request: ExtractRequest, url: str, job_id: str) -> ExtractResponse:
+        try:
+            return self._waiting(request, url, job_id)
+        except Exception as exc:
+            raise _naming(job_id, exc) from exc
+
+    async def _awaited(self, request: ExtractRequest, url: str, job_id: str) -> ExtractResponse:
+        try:
+            return await self._awaiting(request, url, job_id)
+        except Exception as exc:
+            raise _naming(job_id, exc) from exc
+
+    def _waiting(self, request: ExtractRequest, url: str, job_id: str) -> ExtractResponse:
         until, path = wait_until(LLAMAPARSE_WAIT_SECONDS), LLAMAPARSE_JOB_PATH.format(job_id=job_id)
         while (status := _status(self._payload(self._client.get(path, **self._clamped())))) not in LLAMAPARSE_ENDED:
             if time.monotonic() >= until:
@@ -95,7 +111,7 @@ class LlamaParseExtractProvider(_HttpProvider, ExtractProvider):
             request, url, job_id, self._payload(self._client.get(path, params=params, **self._clamped()))
         )
 
-    async def _awaited(self, request: ExtractRequest, url: str, job_id: str) -> ExtractResponse:
+    async def _awaiting(self, request: ExtractRequest, url: str, job_id: str) -> ExtractResponse:
         until, path = wait_until(LLAMAPARSE_WAIT_SECONDS), LLAMAPARSE_JOB_PATH.format(job_id=job_id)
         while (status := _status(self._payload(await self._async_client.get(path, **self._clamped())))) not in (
             LLAMAPARSE_ENDED
@@ -139,3 +155,11 @@ def _still_running(provider: str, job_id: str, status: str | None) -> ProviderEr
     return ProviderError(
         provider, MSG_LLAMAPARSE_STILL_RUNNING.format(job_id=job_id, status=status), kind=ERROR_KIND_TIMEOUT
     )
+
+
+def _naming(job_id: str, exc: Exception) -> Exception:
+    """``exc`` as an error naming the accepted, billed job so its id is never lost; one naming it already, as is."""
+    if job_id in str(exc):
+        return exc
+    detail = MSG_LLAMAPARSE_JOB_ERROR.format(job_id=job_id, error=exc)
+    return ProviderError(PROVIDER_LLAMAPARSE, detail, original=exc, kind=getattr(exc, "kind", None))

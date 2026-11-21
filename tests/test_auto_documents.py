@@ -146,3 +146,29 @@ def test_provider_options_skip_the_parser_rather_than_being_dropped(router: Auto
 
     assert response.provider == "fake"
     assert _calls(router) == ([], [[PDF]])
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1/report.pdf", "http://10.0.0.5/report.pdf", "http://localhost/a.pdf"])
+def test_a_private_document_url_goes_down_the_chain_not_to_the_local_parser(
+    router: AutoExtractProvider, url: str
+) -> None:
+    router.extract(ExtractRequest(urls=[url]))
+
+    assert _calls(router) == ([], [[url]])
+
+
+def test_a_hook_that_refuses_the_parser_sends_documents_down_the_chain(router: AutoExtractProvider) -> None:
+    from web_router.routing.attempts import Attempt, CallRoute, call_route
+
+    asked: list[str] = []
+
+    def refuse_parser(attempt: Attempt) -> bool:
+        asked.append(attempt.provider)
+        return attempt.provider != "fake-parser"
+
+    with call_route(CallRoute(before_attempt=refuse_parser)):
+        response = router.extract(ExtractRequest(urls=[PDF]))
+
+    assert asked[0] == "fake-parser"
+    assert response.documents[0].content == "hello"
+    assert _calls(router) == ([], [[PDF]])

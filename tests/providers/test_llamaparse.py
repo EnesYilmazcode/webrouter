@@ -134,6 +134,34 @@ def test_bytes_are_uploaded_with_the_job_configuration() -> None:
     assert response.documents[0].content == "text_full of the report"
 
 
+def test_a_signed_urls_query_is_not_uploaded_as_the_filename() -> None:
+    cloud = LlamaCloud([])
+    provider = _provider(cloud)
+    try:
+        provider.parse_bytes(b"%PDF-1.4 ...", url=URL + "?X-Amz-Signature=secret", format="text")
+    finally:
+        provider.close()
+
+    assert b'filename="report.pdf"' in cloud.requests[0].content
+    assert b"secret" not in cloud.requests[0].content
+
+
+def test_a_poll_that_fails_after_the_job_started_names_the_job() -> None:
+    def cloud(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"id": "job-1", "status": "PENDING"})
+        raise httpx.ConnectError("connection reset", request=request)
+
+    provider = _provider(cloud)  # type: ignore[arg-type]
+    try:
+        with pytest.raises(ProviderError, match="job-1"):
+            provider.extract(ExtractRequest(urls=[URL]))
+        with pytest.raises(ProviderError, match="job-1"):
+            asyncio.run(provider.aextract(ExtractRequest(urls=[URL])))
+    finally:
+        provider.close()
+
+
 def test_a_missing_key_is_a_configuration_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LLAMA_CLOUD_API_KEY", raising=False)
     with pytest.raises(ConfigurationError):

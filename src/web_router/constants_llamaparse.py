@@ -41,3 +41,4 @@ LLAMAPARSE_WAIT_SECONDS = 300.0
 MSG_LLAMAPARSE_FAILED = "LlamaParse job {job_id} ended {status}: {error}"
 MSG_LLAMAPARSE_STILL_RUNNING = "LlamaParse job {job_id} was still {status} when the wait ran out; it bills either way"
 MSG_LLAMAPARSE_NO_JOB = "LlamaParse answered without a job id (fields: {fields})"
+MSG_LLAMAPARSE_JOB_ERROR = "LlamaParse job {job_id} was accepted (it bills either way), then: {error}"

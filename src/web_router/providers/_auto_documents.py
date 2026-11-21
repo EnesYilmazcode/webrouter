@@ -11,7 +11,13 @@ that has never heard of the parser would drop it.
 
 The step is skipped, and every URL goes down the chain as before, when the
 parser is not installed or cannot serve the request: an HTML extract, or an
-option the parser does not map.
+option the parser does not map. It is skipped too when the call's hook
+refuses the parser (a cost cap its unknown price does not fit), so a budget
+holds it as it holds a chain member.
+
+Only public URLs go to the parser. LiteParse fetches from this machine,
+where the web chain's cloud backends fetch from theirs, so a private or
+loopback document URL goes down the chain as it did before the step.
 """
 
 from __future__ import annotations
@@ -27,8 +33,13 @@ from web_router.constants_liteparse import DOCUMENT_EXTENSIONS
 from web_router.exceptions import DeadlineExceededError, ProviderError
 from web_router.providers._chain import RECOVERABLE, _member_options
 from web_router.providers.base import ExtractProvider, _Collected
+from web_router.routing.attempts import admitted, noted
+from web_router.routing.contract import ToolName
+from web_router.routing.url_policy import public_only
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET
+
+EXTRACT: ToolName = "extract"
 
 _Chain = Callable[[list[str]], ExtractResponse]
 _AsyncChain = Callable[[list[str]], Awaitable[ExtractResponse]]
@@ -59,11 +70,13 @@ class DocumentsFirst:
     def _documents_first(self, request: ExtractRequest, urls: list[str], chain: _Chain) -> ExtractResponse:
         """``chain``'s answer for ``urls``, with each document URL the parser reads served by it instead."""
         documents, parser = self._split(request, urls)
-        if parser is None:
+        sent = request.model_copy(update={"urls": documents})
+        if parser is None or not admitted(EXTRACT, parser.name, sent):
             return chain(urls)
         try:
-            parsed = parser.extract(request.model_copy(update={"urls": documents}))
+            parsed = parser.extract(sent)
         except RECOVERABLE as exc:
+            noted(EXTRACT, parser.name, exc)
             parsed = _unread(parser.name, documents, exc)
         merge = _Merge(self.name, urls, documents, parsed)
         if merge.rest:
@@ -76,11 +89,13 @@ class DocumentsFirst:
     async def _adocuments_first(self, request: ExtractRequest, urls: list[str], chain: _AsyncChain) -> ExtractResponse:
         """Async counterpart of :meth:`_documents_first`."""
         documents, parser = self._split(request, urls)
-        if parser is None:
+        sent = request.model_copy(update={"urls": documents})
+        if parser is None or not admitted(EXTRACT, parser.name, sent):
             return await chain(urls)
         try:
-            parsed = await parser.aextract(request.model_copy(update={"urls": documents}))
+            parsed = await parser.aextract(sent)
         except RECOVERABLE as exc:
+            noted(EXTRACT, parser.name, exc)
             parsed = _unread(parser.name, documents, exc)
         merge = _Merge(self.name, urls, documents, parsed)
         if merge.rest:
@@ -91,8 +106,8 @@ class DocumentsFirst:
         return merge.resolved()
 
     def _split(self, request: ExtractRequest, urls: list[str]) -> tuple[list[str], ExtractProvider | None]:
-        """The document URLs, and the parser to read them; no parser when none is set, built or able to serve."""
-        documents = [url for url in urls if is_document(url)]
+        """The public document URLs, and the parser to read them; no parser when none is set, built or able to serve."""
+        documents = [url for url in urls if is_document(url) and public_only(url) is None]
         if not documents or self.document_parser is None:
             return documents, None
         parser = self._parser_member()
