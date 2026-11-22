@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import socket
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import httpx
@@ -113,6 +114,41 @@ def test_a_missing_file_is_the_targets_own_failure() -> None:
         provider.close()
 
     assert raised.value.kind == ERROR_KIND_TARGET
+    assert "not found" in str(raised.value)
+
+
+MB = b"x" * 1024 * 1024
+
+
+def test_a_huge_error_body_is_not_read_past_its_first_bytes() -> None:
+    pulled: list[int] = []
+
+    def body() -> Iterator[bytes]:
+        for _ in range(60):  # 60 MB, past the 50 MB download cap
+            pulled.append(1)
+            yield MB
+
+    provider = LiteParseExtractProvider(transport=httpx.MockTransport(lambda r: httpx.Response(500, content=body())))
+    with pytest.raises(ProviderError, match="HTTP 500") as caught:
+        provider.extract(ExtractRequest(urls=[URL]))
+
+    assert len(pulled) == 1
+    assert caught.value.kind != ERROR_KIND_TARGET
+
+
+def test_the_async_path_reads_only_an_error_bodys_first_bytes_too() -> None:
+    pulled: list[int] = []
+
+    async def body() -> AsyncIterator[bytes]:
+        for _ in range(60):
+            pulled.append(1)
+            yield MB
+
+    provider = LiteParseExtractProvider(transport=httpx.MockTransport(lambda r: httpx.Response(500, content=body())))
+    with pytest.raises(ProviderError, match="HTTP 500"):
+        asyncio.run(provider.aextract(ExtractRequest(urls=[URL])))
+
+    assert len(pulled) == 1
 
 
 def test_html_is_refused_rather_than_relabelled() -> None:

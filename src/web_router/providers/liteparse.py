@@ -21,7 +21,7 @@ from typing import Any, ClassVar
 import httpx
 from liteparse import LiteParse, ParseResult, ParseTimeoutError
 
-from web_router.constants import PROVIDER_LITEPARSE
+from web_router.constants import HTTP_ERROR_BODY_LIMIT, PROVIDER_LITEPARSE
 from web_router.constants_liteparse import (
     LITEPARSE_ACCEPT,
     LITEPARSE_EXTRACT_DEFAULT_FORMAT,
@@ -77,8 +77,7 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
             with self._client.stream("GET", hop, headers=self._headers_for(url, hop), **self._clamped()) as response:
                 if (following := self._next_hop(url, response)) is None:
                     if response.is_error:
-                        response.read()
-                    self._raise_for_status(response)
+                        self._raise_for_error(response, _head(response.iter_bytes()))
                     data = _capped(url, response, response.iter_bytes())
                     return self._to_response(request, url, self._parse(request, url, data), response)
             hop = following
@@ -92,8 +91,7 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
             async with self._async_client.stream("GET", hop, headers=headers, **self._clamped()) as response:
                 if (following := self._next_hop(url, response)) is None:
                     if response.is_error:
-                        await response.aread()
-                    self._raise_for_status(response)
+                        self._raise_for_error(response, await _ahead(response.aiter_bytes()))
                     chunks = [chunk async for chunk in _limited(url, response, response.aiter_bytes())]
                     result = await self._aparse(request, url, b"".join(chunks))
                     return self._to_response(request, url, result, response)
@@ -109,6 +107,13 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
             if hop == url:
                 raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_NAME.format(url=url, why=why))
             raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_HOP.format(url=url, why=why), kind=ERROR_KIND_TARGET)
+
+    def _raise_for_error(self, response: httpx.Response, head: bytes) -> None:
+        """Raise for an error status as :meth:`_raise_for_status` does, from the body's first bytes only."""
+        content_type = {key: value for key, value in response.headers.items() if key == "content-type"}
+        self._raise_for_status(
+            httpx.Response(response.status_code, headers=content_type, content=head, request=response.request)
+        )
 
     def _headers_for(self, url: str, hop: str) -> dict[str, str]:
         """The caller's headers while the fetch stays on ``url``'s own host; none once a redirect leaves it."""
@@ -208,6 +213,26 @@ async def _limited(url: str, response: httpx.Response, chunks: AsyncIterator[byt
         if total > LITEPARSE_MAX_BYTES:
             raise _too_large(url)
         yield chunk
+
+
+def _head(chunks: Iterator[bytes]) -> bytes:
+    """An error body's first :data:`HTTP_ERROR_BODY_LIMIT` bytes, the rest left unread."""
+    head = bytearray()
+    for chunk in chunks:
+        head += chunk
+        if len(head) >= HTTP_ERROR_BODY_LIMIT:
+            break
+    return bytes(head[:HTTP_ERROR_BODY_LIMIT])
+
+
+async def _ahead(chunks: AsyncIterator[bytes]) -> bytes:
+    """The async side of :func:`_head`."""
+    head = bytearray()
+    async for chunk in chunks:
+        head += chunk
+        if len(head) >= HTTP_ERROR_BODY_LIMIT:
+            break
+    return bytes(head[:HTTP_ERROR_BODY_LIMIT])
 
 
 def _too_large(url: str) -> ProviderError:
