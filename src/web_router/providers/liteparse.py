@@ -32,18 +32,15 @@ from web_router.constants_liteparse import (
     LITEPARSE_MIN_PARSE_SECONDS,
     LITEPARSE_PARSE_TIMEOUT,
     MSG_LITEPARSE_FAILED,
-    MSG_LITEPARSE_PRIVATE_HOP,
-    MSG_LITEPARSE_PRIVATE_NAME,
     MSG_LITEPARSE_REDIRECTS,
     MSG_LITEPARSE_TOO_LARGE,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._deadline import job_budget
 from web_router.providers._http_base import _HttpProvider
-from web_router.providers._resolved_host import resolved_refusal
+from web_router.providers._liteparse_hops import admit, headers_for, next_hop
 from web_router.providers._utils import compact
 from web_router.providers.base import ExtractProvider
-from web_router.routing.url_policy import any_web_url, public_only
 from web_router.types import EXTRACT_FORMAT_ONLY, ExtractedDocument, ExtractFormat, ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
@@ -71,68 +68,49 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
         super().__init__(headers={"Accept": LITEPARSE_ACCEPT}, follow_redirects=False, **kwargs)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        url, hop = urls[0], urls[0]
-        for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
-            self._admit(url, hop)
-            with self._client.stream("GET", hop, headers=self._headers_for(url, hop), **self._clamped()) as response:
-                if (following := self._next_hop(url, response)) is None:
-                    if response.is_error:
-                        self._raise_for_error(response, _head(response.iter_bytes()))
-                    data = _capped(url, response, response.iter_bytes())
-                    return self._to_response(request, url, self._parse(request, url, data), response)
-            hop = following
-        raise ProviderError(self.name, MSG_LITEPARSE_REDIRECTS.format(url=url, limit=LITEPARSE_MAX_REDIRECTS))
+        response, data = self._fetch(urls[0])
+        return self._to_response(request, urls[0], self._parse(request, urls[0], data), response)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        url, hop = urls[0], urls[0]
+        response, data = await self._afetch(urls[0])
+        return self._to_response(request, urls[0], await self._aparse(request, urls[0], data), response)
+
+    def _fetch(self, url: str) -> tuple[httpx.Response, bytes]:
+        """The response that serves ``url``'s file once its redirects are followed, and its body."""
+        hop = url
         for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
-            await asyncio.to_thread(self._admit, url, hop)
-            headers = self._headers_for(url, hop)
-            async with self._async_client.stream("GET", hop, headers=headers, **self._clamped()) as response:
-                if (following := self._next_hop(url, response)) is None:
-                    if response.is_error:
-                        self._raise_for_error(response, await _ahead(response.aiter_bytes()))
-                    chunks = [chunk async for chunk in _limited(url, response, response.aiter_bytes())]
-                    result = await self._aparse(request, url, b"".join(chunks))
-                    return self._to_response(request, url, result, response)
+            admit(url, hop)
+            with self._client.stream(
+                "GET", hop, headers=headers_for(self._own_headers, url, hop), **self._clamped()
+            ) as response:
+                if (following := next_hop(url, response, follow=self._follow)) is None:
+                    return response, self._body(url, response, _read(response.iter_bytes(), _limit(url, response)))
             hop = following
         raise ProviderError(self.name, MSG_LITEPARSE_REDIRECTS.format(url=url, limit=LITEPARSE_MAX_REDIRECTS))
 
-    def _admit(self, url: str, hop: str) -> None:
-        """Refuse ``hop`` when ``url`` looks public but ``hop``'s name resolves to a private address.
+    async def _afetch(self, url: str) -> tuple[httpx.Response, bytes]:
+        """Async counterpart of :meth:`_fetch`."""
+        hop = url
+        for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
+            await asyncio.to_thread(admit, url, hop)
+            headers = headers_for(self._own_headers, url, hop)
+            async with self._async_client.stream("GET", hop, headers=headers, **self._clamped()) as response:
+                if (following := next_hop(url, response, follow=self._follow)) is None:
+                    data = await _aread(response.aiter_bytes(), _limit(url, response))
+                    return response, self._body(url, response, data)
+            hop = following
+        raise ProviderError(self.name, MSG_LITEPARSE_REDIRECTS.format(url=url, limit=LITEPARSE_MAX_REDIRECTS))
 
-        Refusing ``url`` itself is no fault of the file's, so a chain may still try it; a redirect is the target's.
-        """
-        if public_only(url) is None and (why := resolved_refusal(hop)) is not None:
-            if hop == url:
-                raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_NAME.format(url=url, why=why))
-            raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_HOP.format(url=url, why=why), kind=ERROR_KIND_TARGET)
-
-    def _raise_for_error(self, response: httpx.Response, head: bytes) -> None:
-        """Raise for an error status as :meth:`_raise_for_status` does, from the body's first bytes only."""
-        content_type = {key: value for key, value in response.headers.items() if key == "content-type"}
-        self._raise_for_status(
-            httpx.Response(response.status_code, headers=content_type, content=head, request=response.request)
-        )
-
-    def _headers_for(self, url: str, hop: str) -> dict[str, str]:
-        """The caller's headers while the fetch keeps ``url``'s scheme and host; none once a redirect leaves either."""
-        u, h = httpx.URL(url), httpx.URL(hop)
-        return self._own_headers if (u.scheme, u.netloc) == (h.scheme, h.netloc) else {}
-
-    def _next_hop(self, url: str, response: httpx.Response) -> str | None:
-        """Where a redirect points, or ``None`` when ``response`` is the file; raises for a hop it may not take.
-
-        A public URL may not redirect to a private host: a caller handing in a
-        public link never meant this machine to fetch its own network.
-        """
-        if not (self._follow and response.is_redirect):
-            return None
-        target = str(response.url.join(response.headers["location"]))
-        why = public_only(target) if public_only(url) is None else any_web_url(target)
-        if why is not None:
-            raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_HOP.format(url=url, why=why), kind=ERROR_KIND_TARGET)
-        return target
+    def _body(self, url: str, response: httpx.Response, data: bytes) -> bytes:
+        """``data``, read up to :func:`_limit`, as the file; raises for an error status or a file past the cap."""
+        if response.is_error:
+            content_type = {key: value for key, value in response.headers.items() if key == "content-type"}
+            head = data[:HTTP_ERROR_BODY_LIMIT]
+            error = httpx.Response(response.status_code, headers=content_type, content=head, request=response.request)
+            self._raise_for_status(error)
+        if len(data) > LITEPARSE_MAX_BYTES:
+            raise _too_large(url)
+        return data
 
     def parse_bytes(self, data: bytes, *, url: str, format: ExtractFormat | None = None) -> ExtractResponse:
         """Parse a file already in hand, for one fetched some other way (a proxy, say); ``url`` labels the document."""
@@ -187,53 +165,34 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
         return ExtractResponse(provider=self.name, documents=[document])
 
 
-def _check_length(url: str, response: httpx.Response) -> None:
-    """Refuse up front a file whose stated length is already too large."""
+def _limit(url: str, response: httpx.Response) -> int:
+    """How much of the body to read: an error's first bytes, or a file up to the cap, refused up front past it."""
+    if response.is_error:
+        return HTTP_ERROR_BODY_LIMIT
     length = response.headers.get("content-length", "")
     if length.isdigit() and int(length) > LITEPARSE_MAX_BYTES:
         raise _too_large(url)
+    return LITEPARSE_MAX_BYTES
 
 
-def _capped(url: str, response: httpx.Response, chunks: Iterator[bytes]) -> bytes:
-    """The body, refused once it passes :data:`LITEPARSE_MAX_BYTES`, before it fills memory."""
-    _check_length(url, response)
+def _read(chunks: Iterator[bytes], limit: int) -> bytes:
+    """``chunks`` joined, the rest left unread once past ``limit`` bytes."""
     data = bytearray()
     for chunk in chunks:
         data += chunk
-        if len(data) > LITEPARSE_MAX_BYTES:
-            raise _too_large(url)
+        if len(data) > limit:
+            break
     return bytes(data)
 
 
-async def _limited(url: str, response: httpx.Response, chunks: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-    """``chunks``, refused once they pass :data:`LITEPARSE_MAX_BYTES`; the async side of :func:`_capped`."""
-    _check_length(url, response)
-    total = 0
+async def _aread(chunks: AsyncIterator[bytes], limit: int) -> bytes:
+    """The async side of :func:`_read`."""
+    data = bytearray()
     async for chunk in chunks:
-        total += len(chunk)
-        if total > LITEPARSE_MAX_BYTES:
-            raise _too_large(url)
-        yield chunk
-
-
-def _head(chunks: Iterator[bytes]) -> bytes:
-    """An error body's first :data:`HTTP_ERROR_BODY_LIMIT` bytes, the rest left unread."""
-    head = bytearray()
-    for chunk in chunks:
-        head += chunk
-        if len(head) >= HTTP_ERROR_BODY_LIMIT:
+        data += chunk
+        if len(data) > limit:
             break
-    return bytes(head[:HTTP_ERROR_BODY_LIMIT])
-
-
-async def _ahead(chunks: AsyncIterator[bytes]) -> bytes:
-    """The async side of :func:`_head`."""
-    head = bytearray()
-    async for chunk in chunks:
-        head += chunk
-        if len(head) >= HTTP_ERROR_BODY_LIMIT:
-            break
-    return bytes(head[:HTTP_ERROR_BODY_LIMIT])
+    return bytes(data)
 
 
 def _too_large(url: str) -> ProviderError:

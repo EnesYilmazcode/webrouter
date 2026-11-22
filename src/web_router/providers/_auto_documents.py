@@ -69,16 +69,14 @@ class DocumentsFirst:
 
     def _documents_first(self, request: ExtractRequest, urls: list[str], chain: _Chain) -> ExtractResponse:
         """``chain``'s answer for ``urls``, with each document URL the parser reads served by it instead."""
-        documents, parser = self._split(request, urls)
-        sent = request.model_copy(update={"urls": documents})
-        if parser is None or not admitted(EXTRACT, parser.name, sent):
+        if (plan := self._plan(request, urls)) is None:
             return chain(urls)
+        parser, sent = plan
         try:
             parsed = parser.extract(sent)
         except RECOVERABLE as exc:
-            noted(EXTRACT, parser.name, exc)
-            parsed = _unread(parser.name, documents, exc)
-        merge = _Merge(self.name, urls, documents, parsed)
+            parsed = _unread(parser.name, sent.urls, exc)
+        merge = _Merge(self.name, urls, sent.urls, parsed)
         if merge.rest:
             try:
                 merge.collected.add(merge.rest, chain(merge.rest))
@@ -88,16 +86,14 @@ class DocumentsFirst:
 
     async def _adocuments_first(self, request: ExtractRequest, urls: list[str], chain: _AsyncChain) -> ExtractResponse:
         """Async counterpart of :meth:`_documents_first`."""
-        documents, parser = self._split(request, urls)
-        sent = request.model_copy(update={"urls": documents})
-        if parser is None or not admitted(EXTRACT, parser.name, sent):
+        if (plan := self._plan(request, urls)) is None:
             return await chain(urls)
+        parser, sent = plan
         try:
             parsed = await parser.aextract(sent)
         except RECOVERABLE as exc:
-            noted(EXTRACT, parser.name, exc)
-            parsed = _unread(parser.name, documents, exc)
-        merge = _Merge(self.name, urls, documents, parsed)
+            parsed = _unread(parser.name, sent.urls, exc)
+        merge = _Merge(self.name, urls, sent.urls, parsed)
         if merge.rest:
             try:
                 merge.collected.add(merge.rest, await chain(merge.rest))
@@ -105,22 +101,25 @@ class DocumentsFirst:
                 merge.collected.fail(merge.rest, exc)
         return merge.resolved()
 
-    def _split(self, request: ExtractRequest, urls: list[str]) -> tuple[list[str], ExtractProvider | None]:
-        """The public document URLs, and the parser to read them; no parser when none is set, built or able to serve."""
+    def _plan(self, request: ExtractRequest, urls: list[str]) -> tuple[ExtractProvider, ExtractRequest] | None:
+        """The parser and the request it gets for the public document URLs; ``None`` sends every URL down the chain.
+
+        ``None`` when there is no such URL, or the parser is not set, cannot be built, cannot serve the request, or
+        the call's hook refuses it.
+        """
         documents = [url for url in urls if is_document(url) and public_only(url) is None]
-        if not documents or self.document_parser is None:
-            return documents, None
-        parser = self._parser_member()
+        parser = self._parser_member() if documents and self.document_parser is not None else None
         if parser is None or request.format not in parser.supported_formats:
-            return documents, None
+            return None
         # `provider_options` and a vendor mode are another backend's; the parser would drop them unread.
         if (
             request.provider_options
             or request.mode
             or request.specified_parameters() - {"format"} - parser.supported_parameters
         ):
-            return documents, None
-        return documents, parser
+            return None
+        sent = request.model_copy(update={"urls": documents})
+        return (parser, sent) if admitted(EXTRACT, parser.name, sent) else None
 
     def _parser_member(self) -> ExtractProvider | None:
         """The parser, built once; ``None`` when its extra is missing or it cannot be built."""
@@ -146,6 +145,7 @@ class DocumentsFirst:
 
 def _unread(parser: str, documents: list[str], exc: BaseException) -> ExtractResponse:
     """A parser call that raised, as an answer with each document failed, keeping each one's own kind (a 404's)."""
+    noted(EXTRACT, parser, exc)
     failures = getattr(exc, "url_failures", None) or [ExtractFailure.from_error(url, exc) for url in documents]
     return ExtractResponse(provider=parser, failures=failures)
 

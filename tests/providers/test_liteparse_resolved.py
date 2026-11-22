@@ -29,7 +29,7 @@ def dns(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         address = answers.get(host, "93.184.215.14")
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (address, 0))]
 
-    monkeypatch.setattr("web_router.providers._resolved_host.socket.getaddrinfo", getaddrinfo)
+    monkeypatch.setattr("web_router.providers._liteparse_hops.socket.getaddrinfo", getaddrinfo)
     return answers
 
 

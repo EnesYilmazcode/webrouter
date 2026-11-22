@@ -30,7 +30,7 @@ def _public_dns(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch)
     def getaddrinfo(*args: Any, **kwargs: Any) -> list[Any]:
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", 0))]
 
-    monkeypatch.setattr("web_router.providers._resolved_host.socket.getaddrinfo", getaddrinfo)
+    monkeypatch.setattr("web_router.providers._liteparse_hops.socket.getaddrinfo", getaddrinfo)
 
 
 def _pdf(text: str) -> bytes:
