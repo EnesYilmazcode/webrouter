@@ -28,7 +28,7 @@ from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
 from web_router.types import ResearchResponse
 
-TOOL_LIST_BUDGET = 26_700
+TOOL_LIST_BUDGET = 26_750  # SpecStream's 26,670, +50 for `merchant`, +30 for `liteparse` and `llamaparse`
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.6k tokens.
 
 It was 31,051 (about 7.8k tokens) before descriptions were cut down and the
