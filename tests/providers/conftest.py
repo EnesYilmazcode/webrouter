@@ -31,3 +31,8 @@ def public_dns(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) 
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", 0))]
 
     monkeypatch.setattr("web_router.providers._liteparse_hops.socket.getaddrinfo", getaddrinfo)
+
+
+def asked(request: httpx.Request) -> str:
+    """The URL ``request`` asks for, by its ``Host`` header: a pinned request's own URL names the address."""
+    return str(request.url.copy_with(netloc=request.headers["host"].encode("ascii")))

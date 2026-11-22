@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.providers.conftest import asked
 from tests.providers.test_liteparse import TEXT, _pdf
 from web_router.exceptions import ProviderError
 from web_router.providers.auto import AutoExtractProvider
@@ -35,8 +36,8 @@ def dns(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 
 def _transport(seen: list[str], redirect_to: str | None = None) -> httpx.MockTransport:
     def serve(request: httpx.Request) -> httpx.Response:
-        seen.append(str(request.url))
-        if redirect_to is not None and str(request.url) != redirect_to:
+        seen.append(asked(request))
+        if redirect_to is not None and asked(request) != redirect_to:
             return httpx.Response(302, headers={"location": redirect_to})
         return httpx.Response(200, content=_pdf(TEXT), headers={"content-type": "application/pdf"})
 

@@ -38,7 +38,7 @@ from web_router.constants_liteparse import (
 from web_router.exceptions import ProviderError
 from web_router.providers._deadline import job_budget
 from web_router.providers._http_base import _HttpProvider
-from web_router.providers._liteparse_hops import admit, headers_for, next_hop
+from web_router.providers._liteparse_hops import next_hop, pinned
 from web_router.providers._utils import compact
 from web_router.providers.base import ExtractProvider
 from web_router.types import EXTRACT_FORMAT_ONLY, ExtractedDocument, ExtractFormat, ExtractRequest, ExtractResponse
@@ -79,11 +79,10 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
         """The response that serves ``url``'s file once its redirects are followed, and its body."""
         hop = url
         for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
-            admit(url, hop)
-            with self._client.stream(
-                "GET", hop, headers=headers_for(self._own_headers, url, hop), **self._clamped()
-            ) as response:
-                if (following := next_hop(url, response, follow=self._follow)) is None:
+            target, headers, extensions = pinned(url, hop, self._own_headers)
+            kwargs = {"headers": headers, "extensions": extensions, **self._clamped()}
+            with self._client.stream("GET", target, **kwargs) as response:
+                if (following := next_hop(url, hop, response, follow=self._follow)) is None:
                     return response, self._body(url, response, _read(response.iter_bytes(), _limit(url, response)))
             hop = following
         raise ProviderError(self.name, MSG_LITEPARSE_REDIRECTS.format(url=url, limit=LITEPARSE_MAX_REDIRECTS))
@@ -92,10 +91,10 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
         """Async counterpart of :meth:`_fetch`."""
         hop = url
         for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
-            await asyncio.to_thread(admit, url, hop)
-            headers = headers_for(self._own_headers, url, hop)
-            async with self._async_client.stream("GET", hop, headers=headers, **self._clamped()) as response:
-                if (following := next_hop(url, response, follow=self._follow)) is None:
+            target, headers, extensions = await asyncio.to_thread(pinned, url, hop, self._own_headers)
+            kwargs = {"headers": headers, "extensions": extensions, **self._clamped()}
+            async with self._async_client.stream("GET", target, **kwargs) as response:
+                if (following := next_hop(url, hop, response, follow=self._follow)) is None:
                     data = await _aread(response.aiter_bytes(), _limit(url, response))
                     return response, self._body(url, response, data)
             hop = following

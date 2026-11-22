@@ -7,6 +7,7 @@ import asyncio
 import httpx
 import pytest
 
+from tests.providers.conftest import asked
 from tests.providers.test_liteparse import TEXT, URL, _pdf
 from web_router.exceptions import ProviderError
 from web_router.providers.liteparse import LiteParseExtractProvider
@@ -21,7 +22,7 @@ def _redirecting(location: str, seen: list[httpx.Request]) -> LiteParseExtractPr
 
     def serve(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        if str(request.url) == URL:
+        if asked(request) == URL:
             return httpx.Response(302, headers={"location": location})
         return httpx.Response(200, content=_pdf(TEXT), headers={"content-type": "application/pdf"})
 
