@@ -44,3 +44,4 @@ LITEPARSE_MIN_PARSE_SECONDS = 1.0
 MSG_LITEPARSE_TOO_LARGE = "The file at {url} is larger than LiteParse reads ({limit} bytes)"
 MSG_LITEPARSE_REDIRECTS = "The file at {url} redirected more than {limit} times"
 MSG_LITEPARSE_PRIVATE_HOP = "The file at {url} redirected to a host it may not reach: {why}"
+MSG_LITEPARSE_PRIVATE_NAME = "The file at {url} names a host LiteParse may not reach: {why}"

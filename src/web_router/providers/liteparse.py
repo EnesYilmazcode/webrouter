@@ -33,12 +33,14 @@ from web_router.constants_liteparse import (
     LITEPARSE_PARSE_TIMEOUT,
     MSG_LITEPARSE_FAILED,
     MSG_LITEPARSE_PRIVATE_HOP,
+    MSG_LITEPARSE_PRIVATE_NAME,
     MSG_LITEPARSE_REDIRECTS,
     MSG_LITEPARSE_TOO_LARGE,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._deadline import job_budget
 from web_router.providers._http_base import _HttpProvider
+from web_router.providers._resolved_host import resolved_refusal
 from web_router.providers._utils import compact
 from web_router.providers.base import ExtractProvider
 from web_router.routing.url_policy import any_web_url, public_only
@@ -71,6 +73,7 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         url, hop = urls[0], urls[0]
         for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
+            self._admit(url, hop)
             with self._client.stream("GET", hop, headers=self._headers_for(url, hop), **self._clamped()) as response:
                 if (following := self._next_hop(url, response)) is None:
                     if response.is_error:
@@ -84,6 +87,7 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         url, hop = urls[0], urls[0]
         for _ in range(LITEPARSE_MAX_REDIRECTS + 1):
+            await asyncio.to_thread(self._admit, url, hop)
             headers = self._headers_for(url, hop)
             async with self._async_client.stream("GET", hop, headers=headers, **self._clamped()) as response:
                 if (following := self._next_hop(url, response)) is None:
@@ -95,6 +99,16 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
                     return self._to_response(request, url, result, response)
             hop = following
         raise ProviderError(self.name, MSG_LITEPARSE_REDIRECTS.format(url=url, limit=LITEPARSE_MAX_REDIRECTS))
+
+    def _admit(self, url: str, hop: str) -> None:
+        """Refuse ``hop`` when ``url`` looks public but ``hop``'s name resolves to a private address.
+
+        Refusing ``url`` itself is no fault of the file's, so a chain may still try it; a redirect is the target's.
+        """
+        if public_only(url) is None and (why := resolved_refusal(hop)) is not None:
+            if hop == url:
+                raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_NAME.format(url=url, why=why))
+            raise ProviderError(self.name, MSG_LITEPARSE_PRIVATE_HOP.format(url=url, why=why), kind=ERROR_KIND_TARGET)
 
     def _headers_for(self, url: str, hop: str) -> dict[str, str]:
         """The caller's headers while the fetch stays on ``url``'s own host; none once a redirect leaves it."""

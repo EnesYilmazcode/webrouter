@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import socket
+from typing import Any
 
 import httpx
 import pytest
@@ -16,6 +18,18 @@ from web_router.types_errors import ERROR_KIND_TARGET
 URL = "https://example.com/report.pdf"
 LIVE_PDF = "https://arxiv.org/pdf/1706.03762v7.pdf"
 TEXT = "Quarterly revenue grew"
+
+
+@pytest.fixture(autouse=True)
+def _public_dns(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every name resolves to a public address, so no unit test here looks one up for real."""
+    if request.node.get_closest_marker("integration"):
+        return
+
+    def getaddrinfo(*args: Any, **kwargs: Any) -> list[Any]:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", 0))]
+
+    monkeypatch.setattr("web_router.providers._resolved_host.socket.getaddrinfo", getaddrinfo)
 
 
 def _pdf(text: str) -> bytes:
