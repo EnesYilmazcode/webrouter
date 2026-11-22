@@ -11,7 +11,6 @@ fetches from here, so it looks each name up first.
 from __future__ import annotations
 
 import socket
-from urllib.parse import urlsplit
 
 import httpx
 
@@ -63,8 +62,9 @@ def resolved_refusal(url: str) -> str | None:
     the first was judged as written, and the second reaches nothing.
     """
     try:
-        host = urlsplit(url).hostname
-    except ValueError:
+        # The name httpx connects to: IDNA 2008, where getaddrinfo's own encoding of a unicode name is IDNA 2003.
+        host = httpx.URL(url).raw_host.decode("ascii")
+    except (httpx.InvalidURL, UnicodeError):
         return None
     if not host or host_address(host) is not None:
         return None

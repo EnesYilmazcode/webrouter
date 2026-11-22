@@ -23,7 +23,7 @@ PUBLIC = "https://files.example.com/x.pdf"
 @pytest.fixture(autouse=True)
 def dns(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """Each host's one answer; a host not listed resolves to a public address."""
-    answers = {"127.0.0.1.nip.io": "127.0.0.1", "intranet.example.com": "10.0.0.5"}
+    answers = {"127.0.0.1.nip.io": "127.0.0.1", "intranet.example.com": "10.0.0.5", "xn--fa-hia.example": "127.0.0.1"}
 
     def getaddrinfo(host: str, *args: Any, **kwargs: Any) -> list[Any]:
         address = answers.get(host, "93.184.215.14")
@@ -60,6 +60,15 @@ def test_the_async_path_looks_the_name_up_too() -> None:
     seen: list[str] = []
     with pytest.raises(ProviderError, match="may not reach"):
         asyncio.run(_serving(seen).aextract(ExtractRequest(urls=[URL])))
+
+    assert seen == []
+
+
+def test_a_unicode_name_is_looked_up_as_httpx_will_connect_to_it() -> None:
+    """``faß`` is ``fass`` to IDNA 2003 (getaddrinfo's encoding) but ``xn--fa-hia`` to httpx; only the second counts."""
+    seen: list[str] = []
+    with pytest.raises(ProviderError, match="may not reach"):
+        _serving(seen).extract(ExtractRequest(urls=["http://faß.example/x.pdf"]))
 
     assert seen == []
 
