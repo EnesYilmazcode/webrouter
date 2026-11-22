@@ -203,6 +203,15 @@ def test_a_redirect_on_the_same_host_keeps_the_callers_headers() -> None:
     assert [request.headers.get("X-Api-Key") for request in seen] == ["secret", "secret"]
 
 
+def test_a_redirect_from_https_to_http_drops_the_callers_headers() -> None:
+    seen: list[httpx.Request] = []
+    provider = _redirecting("http://example.com/report.pdf", seen)
+
+    provider.extract(ExtractRequest(urls=[URL]))
+
+    assert [request.headers.get("X-Api-Key") for request in seen] == ["secret", None]
+
+
 @pytest.mark.parametrize("location", ["http://127.0.0.1/admin", "http://169.254.169.254/latest", "http://10.0.0.5/x"])
 def test_a_public_url_may_not_redirect_to_a_private_host(location: str) -> None:
     seen: list[httpx.Request] = []

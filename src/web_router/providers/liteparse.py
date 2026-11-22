@@ -116,8 +116,9 @@ class LiteParseExtractProvider(_HttpProvider, ExtractProvider):
         )
 
     def _headers_for(self, url: str, hop: str) -> dict[str, str]:
-        """The caller's headers while the fetch stays on ``url``'s own host; none once a redirect leaves it."""
-        return self._own_headers if httpx.URL(hop).netloc == httpx.URL(url).netloc else {}
+        """The caller's headers while the fetch keeps ``url``'s scheme and host; none once a redirect leaves either."""
+        u, h = httpx.URL(url), httpx.URL(hop)
+        return self._own_headers if (u.scheme, u.netloc) == (h.scheme, h.netloc) else {}
 
     def _next_hop(self, url: str, response: httpx.Response) -> str | None:
         """Where a redirect points, or ``None`` when ``response`` is the file; raises for a hop it may not take.
