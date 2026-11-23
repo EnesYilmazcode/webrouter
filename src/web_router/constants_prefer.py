@@ -12,7 +12,11 @@ MSG_PREFER_NEEDED = "the preferred router takes prefer='cheap', 'fast' or 'accur
 
 MSG_ACCURATE_NEEDS_SCORES = (
     "prefer='accurate' ranks by accuracy scores, and this router holds none: pass accuracy= a mapping of method to "
-    "{{provider: score}}, or a path to that JSON."
+    "{provider: score}, or a path to that JSON."
+)
+
+MSG_SCORES_UNUSED = (
+    "the preferred router at prefer={prefer!r} never reads accuracy scores: pass accuracy= only with prefer='accurate'."
 )
 
 MSG_ACCURACY_FILE = "accuracy= could not read {path!r} as JSON: {why}."
