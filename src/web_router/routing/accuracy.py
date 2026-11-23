@@ -1,8 +1,8 @@
 """A router's own accuracy scores: what ``accuracy=`` takes, checked once, and each candidate's score.
 
-Experimental. web-router ships no scores for routers: a router that ranks by
-accuracy holds the caller's, read from a mapping or a JSON file of the same
-shape -- per method, a backend's score, or one vendor mode's::
+Experimental. A router at ``accurate`` holds the caller's scores, read from a
+mapping or a JSON file of the same shape -- per method, a backend's score, or
+one vendor mode's -- or, given none, the shipped ones (:func:`shipped_scores`)::
 
     {"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
 
@@ -19,8 +19,10 @@ import importlib
 import json
 import os
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
+from web_router._chains import is_accuracy_share, measured_accuracy
 from web_router.constants_modes import PART_SEP
 from web_router.constants_prefer import (
     MSG_ACCURACY_FILE,
@@ -33,7 +35,7 @@ from web_router.constants_prefer import (
     MSG_ACCURACY_SHAPE,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.contract import Candidate, ToolName
+from web_router.routing.contract import Candidate, Prefer, RouteRequest, ToolName
 from web_router.routing.route_tools import ALL_TOOLS
 
 AccuracyScores = Mapping[ToolName, Mapping[str, float]]
@@ -50,6 +52,59 @@ _BACKENDS: dict[ToolName, tuple[str, str]] = {
     "browse": ("web_router.registry", "available_browse_providers"),
 }
 """Where each method's registered backends are listed, read when scores are checked: the registry imports routing."""
+
+
+SHIPPED_METHODS: tuple[ToolName, ...] = ("search", "answer")
+"""The methods whose backends the benchmark behind ``auto``'s order measured."""
+
+
+def router_scores(prefer: Prefer | None, accuracy: AccuracyLike | None) -> AccuracyScores | None:
+    """The scores a router holds: ``accuracy`` read and checked when given; else, at ``accurate``, the shipped ones.
+
+    The caller's scores replace the shipped ones whole: scores from two benchmarks do not compare.
+    """
+    if accuracy is None and prefer == "accurate":
+        return shipped_scores()
+    return accuracy_scores(accuracy)
+
+
+def live_scores(prefer: Prefer | None, caller: AccuracyScores | None) -> AccuracyScores | None:
+    """The caller's parsed scores, else the live shipped scores when accuracy is preferred."""
+    return router_scores(prefer, None) if caller is None else caller
+
+
+def scoped(
+    req: RouteRequest, prefer: Prefer | None, caller: AccuracyScores | None
+) -> tuple[RouteRequest, AccuracyScores | None]:
+    """This call's live scores and custom-candidate eligibility, on a request of its own."""
+    scores = live_scores(prefer, caller)
+    return scored_request(req, scores), scores
+
+
+def shipped_scores() -> AccuracyScores:
+    """Search's and answer's backends, at their default mode, as the benchmark behind ``auto``'s order measured
+    them (``data/chains.json``): the share of its questions each answered correctly. No vendor mode is scored."""
+    from web_router.registry import is_custom  # registry imports routing while loading
+
+    return {
+        method: {name: score for name, score in measured_accuracy(method).items() if not is_custom(method, name)}
+        for method in SHIPPED_METHODS
+    }
+
+
+def scored_request(req: RouteRequest, scores: AccuracyScores | None) -> RouteRequest:
+    """Mark custom candidates against this router's scores without changing keyless/options eligibility."""
+    from web_router.registry import is_custom  # registry imports routing while loading
+
+    if scores is None:
+        return req
+    return replace(
+        req,
+        candidates=tuple(
+            replace(c, measured=c.measured and score_of(scores, c) is not None) if is_custom(c.tool, c.provider) else c
+            for c in req.candidates
+        ),
+    )
 
 
 def accuracy_scores(accuracy: AccuracyLike | None) -> AccuracyScores | None:
@@ -98,7 +153,7 @@ def _checked(method: ToolName, keys: object) -> dict[str, float]:
         if not isinstance(key, str):
             raise ConfigurationError(MSG_ACCURACY_SHAPE.format(got=key, where=method))
         _known(method, key)
-        if isinstance(score, bool) or not isinstance(score, int | float) or not 0 <= score <= 1:  # NaN fails too
+        if not is_accuracy_share(score):  # NaN fails too
             raise ConfigurationError(MSG_ACCURACY_SCORE.format(key=key, method=method, got=score))
         out[key] = float(score)
     return out
