@@ -63,6 +63,7 @@ from web_router.constants import (
     MCP_MSG_BROWSER_REFUSED_UNVERIFIED,
     MS_PER_SECOND,
 )
+from web_router.mcp.navigation_dns import ResolutionCache
 from web_router.mcp.navigation_rules import files_allowed, private_allowed, private_refusal
 
 if TYPE_CHECKING:
@@ -150,6 +151,7 @@ class NavigationGuard:
         self._page: Page | None = None
         self._blocked: str | None = None
         self._named: dict[tuple[str, int | None], str] = {}
+        self._dns = ResolutionCache()
         self._overflowed = False
 
     async def install(self, page: Page) -> None:
@@ -256,6 +258,9 @@ class NavigationGuard:
         if host is None or host_address(host) is not None:
             # No name to look up: a literal address was judged as it stands.
             return None
+        return await self._dns.get((host, port), lambda: self._resolve(url, host, port))
+
+    async def _resolve(self, url: str, host: str, port: int | None) -> str | None:
         try:
             # On a worker thread: a lookup can take seconds, and every other
             # request of every session waits on this event loop meanwhile.
