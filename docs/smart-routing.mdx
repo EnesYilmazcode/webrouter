@@ -254,7 +254,9 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `rules`, attached unless you pass
+The library ships two keyless routers. `router="data-driven"` ranks web
+methods from bundled data without a routing model call: see
+[The data-driven router](/smart-routing#the-data-driven-router). The other, `rules`, is attached unless you pass
 `router=` (`router="rules"` names it, `router=None` attaches none): a prompt
 with a URL is extracted; one asking in so many words for a report, a comparison
 or an in-depth analysis is researched, or searched when no research backend is
@@ -275,6 +277,107 @@ server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-budget_status).
+
+## The data-driven router
+
+`router="data-driven"` ranks web methods from bundled data without a routing
+model call. The data is a table built from 1,600 requests from public
+benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is
+experimental, needs no key, calls nothing and answers in microseconds. Like
+`rules`, only `plan()` and `run()` ask it, and it ranks no backends.
+
+Try `data-driven` when you want method rankings from training counts, including
+`browse` when you opt in. `rules` chooses extract for a URL, research for a
+research request, and search otherwise. The data-driven router has not yet been
+measured against `rules` on held-out labelled requests; there is no measured
+accuracy advantage to recommend switching for.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter(router="data-driven")
+plan = router.plan("compare the pricing plans of the top 5 CRM tools")
+plan.tool             # "research", with a research backend configured
+plan.decision.reason  # "data-driven 0.1.1: research for verb=analyze, url_target=none"
+```
+
+It reads five things in the prompt, each with a regular expression:
+
+| Feature | Values | What it reads |
+|---|---|---|
+| `verb` | `extract`, `act`, `navigate`, `compile`, `analyze`, `question`, `other` | the leading verb after openers like "please" or "can you", or a question word |
+| `url_target` | `none`, `site`, `page` | no URL, a URL to a site's root, or a URL to one page |
+| `plural` | `yes`, `no` | an ask for many items: all, every, list, top 10 |
+| `kw_research` | `yes`, `no` | a research word: report, compare, in-depth, overview |
+| `ui_action` | `yes`, `no` | an action on a page: click, log in, add to cart |
+
+The table counts, for each combination of values, how many training requests
+each method served. The router looks up the prompt's five values; a
+combination training saw fewer than 20 times backs off to the first four
+values, then three, down to the counts of every request. It ranks that row's
+methods, most common first, and puts `search` last when the row does not name
+it. The expressions read English.
+
+Three methods are treated apart:
+
+- `browse` is ranked only when you opt in, since a browser agent is slow and
+  billed: `router_config={"browse": True}`. Without it, the row's next method
+  runs.
+- `extract` is ranked only when the call names a URL that passed your
+  [URL policy](/smart-routing#url-policy).
+- `answer` is not a method the table was trained on, so it is never picked.
+
+The table ships as a versioned release, apart from the
+library's own version: `src/web_router/data/data_driven/manifest.json` names the
+version, and every decision's `reason` starts with it. The version changes only
+when a newly trained table ships. A golden file of two thousand requests, with
+the features and method the training code gave each one, is replayed in the
+tests, so the shipped expressions cannot drift from the ones the table was
+trained with.
+
+### Trained on
+
+The training owner reports these sources for release `0.1.1`, and the release's
+manifest lists them under `tool_table.sources`. Counts describe requests used,
+not each dataset's size. The trainers assigned the method labels; the source
+datasets do not supply those labels. The shipped table contains aggregate
+counts, and the golden requests are synthetic.
+
+| Source | Requests | Version or snapshot reported | Licence reported |
+|---|---:|---|---|
+| [Mind2Web-Live](https://huggingface.co/datasets/iMeanAI/Mind2Web-Live) | 240 | `train_20240528` / `test_20241024` | CC-BY-4.0 |
+| [WebBench](https://huggingface.co/datasets/Halluminate/WebBench) | 240 | `webbenchfinal.csv` | MIT |
+| [DeepSearchQA](https://huggingface.co/datasets/google/deepsearchqa) | 200 | `DSQA-full.csv` | Apache-2.0 |
+| [Bananalyzer](https://github.com/reworkd/bananalyzer/tree/d1b1ae52) | 154 | `d1b1ae52` | MIT |
+| [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-verified) | 120 | `simpleqa_verified.csv` | MIT |
+| [WebWalkerQA](https://huggingface.co/datasets/callanwu/WebWalkerQA) | 188 | main + silver, 94 each | Apache-2.0 |
+| [Exa benchmarks](https://github.com/exa-labs/benchmarks/tree/a6a9590b) | 240 | `a6a9590b`: WebCode highlights 80, RAG 80, Company RAG 40, contents 40 | MIT |
+| [ResearchQA](https://huggingface.co/datasets/realliyifei/ResearchQA) | 80 | test split | MIT |
+| [Researchy Questions](https://huggingface.co/datasets/corbyrosset/researchy_questions) | 80 | test split | CDLA-Permissive-2.0 |
+| [DeepResearch Bench](https://github.com/Ayanami0730/deep_research_bench) | 40 | `main` | Apache-2.0 |
+| [Stagehand extract evals](https://github.com/browserbase/stagehand/tree/9afa0952) | 18 | `9afa0952` | MIT |
+| Synthetic requests generated for this router | 1,078 | 790 matched-style + 288 fan-out | Not a third-party benchmark |
+
+The GitHub sources are pinned to the commits shown. The Hugging Face files and
+DeepResearch Bench's were fetched from `main` and frozen on 2026-11-08, and the
+manifest records a SHA-256 for each file: a freeze date and a checksum, not a
+dataset revision.
+
+Release `0.1.1` was retrained without three sources an earlier, unreleased
+table used, because their terms for derived data were unclear: NQ-Open
+(CC-BY-SA-3.0, share-alike), WideSearch (no licence text) and a FreshQA mirror
+that states no licence. The most common method of every row is unchanged,
+which the golden file replays. What a row ranks after its top method did
+change in three rows of requests that ask for an action on a page: with
+`browse` off, they now get search before research, where the earlier table
+ranked research first.
+
+Mind2Web-Live is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which asks for
+attribution: the table's counts are derived in part from Mind2Web-Live by
+iMean AI, relabelled by method and reduced to counts. The repository's `NOTICE`
+file carries the same line. The licences above are as the sources state them;
+this list is not legal advice.
 
 ## A router service
 
