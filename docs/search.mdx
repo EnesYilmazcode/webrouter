@@ -45,14 +45,14 @@ the same as `budget=Budget(time_limit_s=5)`; see
 [Running in production](/production#timeouts).
 ## Data APIs that match the search
 
-A search also lists the data APIs whose catalog entries match the query — a
-vendor's own API, such as Datadog's monitors or Google Ads' reports (see
-[Vendor data](/vendors)) — under `response.data_apis`, beside the web
+A search also lists the [data APIs](/vendors) whose catalog entries match the query — a
+vendor's own API, such as Datadog's monitors or Google Ads' reports (browse them all in the
+[Web Catalog](/data-apis)) — under `response.data_apis`, beside the web
 results:
 
 ```python
 response = router.search("datadog monitors")
-response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_data_api takes
+response.data_apis[0].endpoint  # 'datadog.monitors.search', the name call_data_api takes
 response.data_apis[0].configured  # False until its credentials are set
 response.data_apis[0].missing  # the variable to set for each one that is not
 ```

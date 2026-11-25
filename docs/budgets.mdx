@@ -6,8 +6,8 @@ icon: "coins"
 
 Every response says what the call cost and how long it took. A budget caps
 what one call, or a block of calls, may spend and wait. Under a cost cap `auto`
-tries the cheaper of the backends that score alike, the `cheapest_first` router
-tries the free ones first, and a spend log keeps what you spent across runs.
+tries the cheaper of the backends that score alike, the `preferred` router at
+`cheap` tries the free ones first, and a spend log keeps what you spent across runs.
 
 ```python
 from web_router import Budget, WebRouter
@@ -170,8 +170,10 @@ too, `auto` or a named backend, with or without a `budget=` of its own. A thread
 
 With a cost cap, `auto` tries search's and answer's backends in cost order
 among those the benchmark cannot tell apart, unless a router ranks them itself.
-The default `rules` router picks only the method, so `plan()`, `run()` and the
-MCP server's `web_run` keep this order too. The default order is
+The default `data-driven` router orders measured search candidates in `plan()`,
+`run()` and the MCP server's `web_run`, using its
+[provider table](/smart-routing#which-search-backend). Budget eligibility still uses
+the price list below. Where no router orders the backends, the static order is
 ranked by measured accuracy, and backends within the method's noise floor of
 each other -- a gap smaller than a rerun's spread -- form one tier. Under a cost
 cap each tier runs cheapest first, priced for this request: its depth, result
@@ -179,26 +181,28 @@ count and URLs, a $0 backend first, an unknown price last. A measurably better
 backend still runs before a cheaper, worse one. The order is on
 `response.decision.merged`.
 
-Extract, research and browse keep their order: no benchmark ranks their
-backends' quality, so there is nothing to trade cost against. Nor does the
-benchmark rank a keyless backend, so with no key the keyless tier keeps its
-order, `$0` backends included; attach `cheapest_first` (below) to run those
-first. A `chain` you set
+A router built with a preference replaces this order, capped or not: see
+[Preferring cheap, fast or accurate](/smart-routing#preferring-cheap-fast-or-accurate).
+
+Without a router ranking them, extract, research and browse keep their order:
+no benchmark ranks their backends' quality, so there is nothing to trade cost
+against. The same holds for the keyless tier, which the benchmark does not
+rank; attach `preferred` at `cheap` (below) to run its `$0` backends first. A `chain` you set
 or a backend you name runs as given.
 
 ## Free backends first
 
 When price matters more than the accuracy gap, attach the built-in
-`cheapest_first` router. It orders the backends of every routed call -- search,
+`preferred` router at `cheap`. It orders the backends of every routed call -- search,
 extract, answer, research and browse -- by estimated cost, $0 first, then the
 cheapest paid ones, an unknown price last; ties keep the default order. It
 needs no key and calls nothing. `open_browser` is never routed: name
 `provider="local"` for a free browser.
 
 ```python
-from web_router import Budget, WebRouter
+from web_router import Budget, PreferredRouter, WebRouter
 
-router = WebRouter(router="cheapest_first")  # or router=cheapest_first, the function
+router = WebRouter(router=PreferredRouter("cheap"))  # or router="preferred", router_config={"prefer": "cheap"}
 with router.budget(Budget(max_cost_usd=0.05, time_limit_s=90)) as b:
     for question in questions:
         response = b.search(question)  # you-mcp, exa-mcp, parallel-mcp before any paid backend
