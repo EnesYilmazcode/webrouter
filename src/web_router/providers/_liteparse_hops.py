@@ -2,10 +2,11 @@
 
 Kept apart from :mod:`web_router.providers.liteparse` so that file stays short.
 
-:func:`~web_router.routing.url_policy.public_only` reads the host as written, so
-a public-looking name that points at ``127.0.0.1`` passes it. A cloud backend
-fetches from its own network and never reaches this machine's; LiteParse
-fetches from here, so it looks each name up first.
+:func:`~web_router.routing.url_policy.public_as_written` reads the host as
+written, so a public-looking name that points at ``127.0.0.1`` passes it.
+LiteParse fetches from here, so it looks each name up once and connects to that
+answer; a second lookup, as :func:`~web_router.routing.url_policy.public_only`
+makes, could get a different one.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from web_router.constants_liteparse import (
 )
 from web_router.constants_urls import MSG_URL_LOOPBACK, MSG_URL_METADATA, MSG_URL_PRIVATE
 from web_router.exceptions import ProviderError
-from web_router.routing.url_policy import any_web_url, public_only
+from web_router.routing.url_policy import any_web_url, public_as_written
 from web_router.types_errors import ERROR_KIND_TARGET
 
 Pinned = tuple[httpx.URL, dict[str, str], dict[str, Any]]
@@ -42,7 +43,7 @@ def pinned(url: str, hop: str, headers: dict[str, str]) -> Pinned:
     """
     target, sent = httpx.URL(hop), headers_for(headers, url, hop)
     host = target.raw_host.decode("ascii")
-    if public_only(url) is not None or host_address(host) is not None:
+    if public_as_written(url) is not None or host_address(host) is not None:
         return target, sent, {}  # a private URL asked for directly, or a literal address judged as written
     why, address = _resolved(host)
     if why is not None:
@@ -63,7 +64,7 @@ def next_hop(url: str, hop: str, response: httpx.Response, *, follow: bool) -> s
         return None
     # Joined to ``hop``, not ``response.url``: a pinned request's URL names the address, not the host.
     target = str(httpx.URL(hop).join(response.headers["location"]))
-    why = public_only(target) if public_only(url) is None else any_web_url(target)
+    why = public_as_written(target) if public_as_written(url) is None else any_web_url(target)
     if why is not None:
         raise _private_hop(url, why)
     return target
